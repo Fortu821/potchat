@@ -8,6 +8,7 @@ import Profile from './pages/Profile'
 import NotificationsPage from './pages/NotificationsPage'
 import Chats from './pages/Chats'
 import Chat from './pages/Chat'
+import Moderation from './pages/Moderation'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:conversationId" element={<Chat />} />
+          <Route path="/moderation" element={<Moderation />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

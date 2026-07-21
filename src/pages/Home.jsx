@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import Comments from '../components/Comments'
 import ThemeToggle from '../components/ThemeToggle'
+import ReportButton from '../components/ReportButton'
 
 export default function Home() {
   const { user, signOut } = useAuth()
@@ -292,6 +293,14 @@ export default function Home() {
             <span className="nav-label">Messaggi</span>
           </NavLink>
 
+          {/* 🚩 MODERAZIONE - visibile solo a moderatori/admin */}
+          {user?.role === 'moderator' || user?.role === 'admin' ? (
+            <NavLink to="/moderation" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <span className="nav-icon">🚩</span>
+              <span className="nav-label">Moderazione</span>
+            </NavLink>
+          ) : null}
+
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
             <span className="nav-label">Profilo</span>
@@ -468,6 +477,18 @@ export default function Home() {
                   >
                     🔄 {post.reposts_count || 0}
                   </button>
+
+                  {/* 🚩 SEGNALA - solo per utenti loggati */}
+                  {user && (
+                    <ReportButton
+                      targetType="post"
+                      targetId={post.id}
+                      onReported={() => {
+                        // Opzionale: puoi mostrare un toast o aggiornare qualcosa
+                        console.log('Post segnalato!')
+                      }}
+                    />
+                  )}
                 </div>
 
                 {isCommenting && (

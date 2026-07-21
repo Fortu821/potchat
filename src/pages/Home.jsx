@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import Comments from '../components/Comments'
 import ThemeToggle from '../components/ThemeToggle'
 import ReportButton from '../components/ReportButton'
+import MediaUpload from '../components/MediaUpload'
 
 export default function Home() {
   const { user, signOut } = useAuth()
@@ -18,6 +19,10 @@ export default function Home() {
   const [newPostContent, setNewPostContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [commentingPostId, setCommentingPostId] = useState(null)
+
+  // MEDIA UPLOAD
+  const [mediaUrl, setMediaUrl] = useState(null)
+  const [mediaType, setMediaType] = useState(null)
 
   // STATS
   const [stats, setStats] = useState({
@@ -153,14 +158,17 @@ export default function Home() {
     await fetchPosts(filter)
   }
 
-  // ----- CREA POST -----
+  // ----- CREA POST (CON MEDIA) -----
   async function handleCreatePost(e) {
     e.preventDefault()
     if (!user) {
       alert('Devi essere loggato per pubblicare')
       return
     }
-    if (!newPostContent.trim()) return
+    if (!newPostContent.trim() && !mediaUrl) {
+      alert('Scrivi qualcosa o allega un file')
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -168,12 +176,16 @@ export default function Home() {
         .from('posts')
         .insert({
           user_id: user.id,
-          content: newPostContent.trim()
+          content: newPostContent.trim() || null,
+          media_url: mediaUrl || null,
+          media_type: mediaType || null
         })
 
       if (error) throw error
 
       setNewPostContent('')
+      setMediaUrl(null)
+      setMediaType(null)
       await refreshPosts()
     } catch (err) {
       console.error('❌ Errore nella pubblicazione:', err)
@@ -293,7 +305,6 @@ export default function Home() {
             <span className="nav-label">Messaggi</span>
           </NavLink>
 
-          {/* 🚩 MODERAZIONE - visibile solo a moderatori/admin */}
           {user?.role === 'moderator' || user?.role === 'admin' ? (
             <NavLink to="/moderation" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <span className="nav-icon">🚩</span>
@@ -356,7 +367,7 @@ export default function Home() {
           </button>
         </div>
 
-        {/* CREAZIONE POST */}
+        {/* CREAZIONE POST CON MEDIA */}
         {user ? (
           <form onSubmit={handleCreatePost} className="card" style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -373,9 +384,28 @@ export default function Home() {
                   rows={3}
                   className="textarea"
                 />
+
+                {/* MEDIA UPLOAD */}
+                <MediaUpload
+                  onUpload={(url, type) => {
+                    setMediaUrl(url)
+                    setMediaType(type)
+                  }}
+                  onRemove={() => {
+                    setMediaUrl(null)
+                    setMediaType(null)
+                  }}
+                />
+
+                {mediaUrl && (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                    ✅ File caricato: {mediaType === 'image' ? '📷 Immagine' : '🎬 Video'}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={isSubmitting || !newPostContent.trim()}
+                  disabled={isSubmitting || (!newPostContent.trim() && !mediaUrl)}
                   className="btn btn-primary"
                   style={{ marginTop: '8px' }}
                 >
@@ -421,6 +451,16 @@ export default function Home() {
             const isReposted = post.is_reposted_by_user || false
             const isCommenting = commentingPostId === post.id
 
+            // Determina il tipo di media (se non specificato, controlla l'estensione)
+            let mediaType = post.media_type
+            if (post.media_url && !mediaType) {
+              if (post.media_url.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
+                mediaType = 'video'
+              } else {
+                mediaType = 'image'
+              }
+            }
+
             return (
               <div key={post.id} className="card">
                 <div className="card-header">
@@ -444,6 +484,42 @@ export default function Home() {
                 </div>
 
                 <div className="card-content">{post.content}</div>
+
+                {/* MEDIA (IMMAGINE O VIDEO) */}
+                {post.media_url && (
+                  <div className="post-media" style={{ marginTop: '8px' }}>
+                    {mediaType === 'video' ? (
+                      <video
+                        src={post.media_url}
+                        controls
+                        className="post-media-video"
+                        controlsList="nodownload"
+                        style={{
+                          width: '100%',
+                          maxHeight: '400px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: '#000'
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={post.media_url}
+                        alt="Contenuto del post"
+                        className="post-media-image"
+                        style={{
+                          width: '100%',
+                          maxHeight: '400px',
+                          objectFit: 'cover',
+                          borderRadius: 'var(--radius-sm)'
+                        }}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div className="card-footer">
                   <button
@@ -478,15 +554,10 @@ export default function Home() {
                     🔄 {post.reposts_count || 0}
                   </button>
 
-                  {/* 🚩 SEGNALA - solo per utenti loggati */}
                   {user && (
                     <ReportButton
                       targetType="post"
                       targetId={post.id}
-                      onReported={() => {
-                        // Opzionale: puoi mostrare un toast o aggiornare qualcosa
-                        console.log('Post segnalato!')
-                      }}
                     />
                   )}
                 </div>

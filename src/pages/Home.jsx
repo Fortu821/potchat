@@ -176,11 +176,10 @@ export default function Home() {
         .from('posts')
         .insert({
           user_id: user.id,
-          content: newPostContent.trim() || null,
+          content: newPostContent.trim() || '',
           media_url: mediaUrl || null,
           media_type: mediaType || null
         })
-
       if (error) throw error
 
       setNewPostContent('')

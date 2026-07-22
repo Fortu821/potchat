@@ -110,6 +110,8 @@ export default function Home() {
     setError(null)
 
     try {
+      // ⚠️ Non possiamo ordinare direttamente su pinned_by_user perché è calcolato.
+      // Prendiamo i dati e li ordiniamo manualmente dopo.
       let query = supabase
         .from('posts_with_counts')
         .select('*')
@@ -158,10 +160,19 @@ export default function Home() {
 
       if (queryError) throw queryError
 
+      // 👇 ORDINA MANUALMENTE: pinned_by_user true prima, poi created_at
+      const sortedData = (data || []).sort((a, b) => {
+        // pinned_by_user true prima
+        if (a.pinned_by_user && !b.pinned_by_user) return -1
+        if (!a.pinned_by_user && b.pinned_by_user) return 1
+        // Se hanno lo stesso stato di pin, ordina per created_at (più recente prima)
+        return new Date(b.created_at) - new Date(a.created_at)
+      })
+
       if (reset) {
-        setPosts(data || [])
+        setPosts(sortedData)
       } else {
-        setPosts(prev => [...prev, ...(data || [])])
+        setPosts(prev => [...prev, ...sortedData])
       }
 
       setHasMore((data || []).length === POSTS_PER_PAGE)
@@ -569,6 +580,17 @@ export default function Home() {
                 className="card"
                 ref={index === posts.length - 1 ? lastPostRef : null}
               >
+                {/* 📌 ICONA FISSATO (solo se pinned_by_user è true per questo utente) */}
+                {post.pinned_by_user && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '4px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.2rem', color: 'var(--color-primary)' }}>📌</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '4px' }}>Fissato</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+                      (commenta per sfissarlo)
+                    </span>
+                  </div>
+                )}
+
                 <div className="card-header">
                   <Link to={`/profile/${post.username}`}>
                     {post.avatar_url ? (

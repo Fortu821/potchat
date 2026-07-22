@@ -16,6 +16,37 @@ export default function Comments({ postId }) {
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editCommentContent, setEditCommentContent] = useState('')
 
+  // ----- SFISSA IL POST PER L'UTENTE CORRENTE (se è fissato) -----
+  async function unpinPostForCurrentUser() {
+    if (!postId || !user) return
+
+    try {
+      // Controlla se il post è fissato globalmente
+      const { data, error } = await supabase
+        .from('posts')
+        .select('pinned')
+        .eq('id', postId)
+        .single()
+
+      if (error || !data?.pinned) return
+
+      // Se è fissato, registra che questo utente ha commentato su questo post
+      // Così per lui non sarà più fissato
+      const { error: rpcError } = await supabase
+        .rpc('unpin_for_user', {
+          post_id: postId,
+          user_id: user.id
+        })
+
+      if (rpcError) throw rpcError
+
+      console.log('📌 Post sfissato per l\'utente corrente.')
+    } catch (err) {
+      console.error('❌ Errore durante lo sfissaggio:', err)
+    }
+  }
+
+  // ----- CARICA COMMENTI -----
   useEffect(() => {
     fetchComments()
   }, [postId])
@@ -61,6 +92,7 @@ export default function Comments({ postId }) {
     }
   }
 
+  // ----- INVIA COMMENTO (radice) -----
   async function handleSubmitComment(e) {
     e.preventDefault()
     if (!user) {
@@ -87,6 +119,10 @@ export default function Comments({ postId }) {
       setNewComment('')
       setReplyTo(null)
       await fetchComments()
+
+      // 👇 SFISSA IL POST PER L'UTENTE CORRENTE (se era fissato)
+      await unpinPostForCurrentUser()
+
     } catch (err) {
       console.error('❌ Errore nell\'invio commento:', err)
       alert('Errore nell\'invio del commento')
@@ -95,6 +131,7 @@ export default function Comments({ postId }) {
     }
   }
 
+  // ----- EDIT COMMENT -----
   async function handleEditComment(commentId) {
     if (!editCommentContent.trim()) return
 
@@ -117,6 +154,7 @@ export default function Comments({ postId }) {
     }
   }
 
+  // ----- RENDER COMMENTO -----
   function CommentItem({ comment, depth = 0 }) {
     const [showReplyForm, setShowReplyForm] = useState(false)
     const isOwnComment = user?.id === comment.user_id
@@ -253,6 +291,10 @@ export default function Comments({ postId }) {
                   })
                 await fetchComments()
                 setShowReplyForm(false)
+
+                // 👇 SFISSA IL POST PER L'UTENTE CORRENTE (se era fissato)
+                await unpinPostForCurrentUser()
+
               } catch (err) {
                 console.error('❌ Errore risposta:', err)
                 alert('Errore nell\'invio della risposta')
@@ -272,6 +314,7 @@ export default function Comments({ postId }) {
     )
   }
 
+  // ----- FORM RISPOSTA -----
   function ReplyForm({ parentComment, onCancel, onReply }) {
     const [content, setContent] = useState('')
     const [isSending, setIsSending] = useState(false)
@@ -325,6 +368,7 @@ export default function Comments({ postId }) {
     )
   }
 
+  // ----- RENDER PRINCIPALE -----
   if (loading) return <div style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>⏳ Caricamento commenti...</div>
 
   return (

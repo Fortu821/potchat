@@ -416,7 +416,7 @@ export default function Home() {
             <span className="nav-label">Messaggi</span>
           </NavLink>
           <NavLink to="/feedback" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-            <span className="nav-icon">💬</span>
+            <span className="nav-icon">📣</span>
             <span className="nav-label">Feedback</span>
           </NavLink>
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>

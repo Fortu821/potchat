@@ -63,7 +63,7 @@ export default function Feedback() {
   return (
     <div className="app-container" style={{ maxWidth: '500px', margin: '40px auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>💬 Feedback</h2>
+        <h2>📣 Feedback</h2>
         <Link to="/" className="btn btn-secondary btn-sm">← Home</Link>
       </div>
 
@@ -123,7 +123,7 @@ export default function Feedback() {
           className="btn btn-primary"
           style={{ width: '100%' }}
         >
-          {isSubmitting ? '⏳ Invio in corso...' : '💬 Invia feedback'}
+          {isSubmitting ? '⏳ Invio in corso...' : '📣 Invia feedback'}
         </button>
 
         <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '8px', textAlign: 'center' }}>

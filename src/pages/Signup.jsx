@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Logo from '../components/Logo'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -18,8 +19,6 @@ export default function Signup() {
     setLoading(true)
     try {
       await signUp(email, password, username)
-      // Dopo la registrazione, l'utente viene creato e il trigger crea il profilo.
-      // Reindirizziamo al login (o possiamo fare il login automatico)
       navigate('/login')
     } catch (err) {
       setError(err.message)
@@ -29,45 +28,62 @@ export default function Signup() {
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto' }}>
-      <h2>🌱 Registrati</h2>
+    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '0 20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <Logo variant="full" style={{ height: '48px' }} />
+      </div>
+
+      <h2 style={{ textAlign: 'center' }}>🌱 Registrati</h2>
+
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email</label>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            Email
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px', margin: '8px 0' }}
+            className="input"
           />
         </div>
-        <div>
-          <label>Username</label>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            Username
+          </label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px', margin: '8px 0' }}
+            className="input"
           />
         </div>
-        <div>
-          <label>Password</label>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            Password
+          </label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px', margin: '8px 0' }}
+            className="input"
           />
         </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ padding: '10px 20px' }}>
-          {loading ? 'Caricamento...' : 'Registrati'}
+        {error && <p style={{ color: 'var(--color-danger)' }}>{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn btn-primary"
+          style={{ width: '100%' }}
+        >
+          {loading ? '⏳ Caricamento...' : '🌱 Registrati'}
         </button>
       </form>
-      <p>
+
+      <p style={{ marginTop: '16px', textAlign: 'center' }}>
         Hai già un account? <Link to="/login">Accedi</Link>
       </p>
     </div>

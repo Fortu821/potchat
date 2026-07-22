@@ -1,6 +1,7 @@
 // src/components/WelcomeModal.jsx
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import Logo from './Logo'
 
 export default function WelcomeModal({ onClose }) {
   const [isVisible, setIsVisible] = useState(true)
@@ -60,11 +61,8 @@ export default function WelcomeModal({ onClose }) {
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '3.5rem' }}>🌱</div>
-          <h1 style={{ margin: '8px 0 0 0', fontSize: '2rem' }}>
-            Benvenuto su <span style={{ color: 'var(--color-primary)' }}>PotChat</span>
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem', marginTop: '4px' }}>
+          <Logo variant="full" style={{ height: '48px', margin: '0 auto' }} />
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem', marginTop: '8px' }}>
             Il social network dove <strong>sei una pianta</strong>.
           </p>
         </div>

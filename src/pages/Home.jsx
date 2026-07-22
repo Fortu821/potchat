@@ -8,6 +8,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import ReportButton from '../components/ReportButton'
 import MediaUpload from '../components/MediaUpload'
 import { parseText } from '../utils/textParser'
+import Logo from '../components/Logo'
 
 export default function Home() {
   const { user, signOut } = useAuth()
@@ -84,7 +85,7 @@ export default function Home() {
               default: message = 'ha interagito con te'
             }
             new Notification(`🌱 ${actorName} ${message}`, {
-              icon: '/favicon.ico',
+              icon: '/potchat_icon.svg',
               tag: notif.id,
               requireInteraction: true
             })
@@ -394,10 +395,7 @@ export default function Home() {
     <div className="home-layout">
       <aside className="sidebar-left">
         <div className="sidebar-logo">
-          <Link to="/">
-            <span className="emoji">🌱</span>
-            <span className="highlight">Pot</span>Chat
-          </Link>
+          <Logo variant="full" />
         </div>
 
         <nav className="sidebar-nav">
@@ -765,9 +763,12 @@ export default function Home() {
           )}
         </div>
         <div className="sidebar-card" style={{ marginTop: '12px', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-            🌱 PotChat • {new Date().getFullYear()}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Logo variant="icon" style={{ height: '18px', width: '18px' }} />
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
+              PotChat • {new Date().getFullYear()}
+            </span>
+          </div>
         </div>
       </aside>
     </div>

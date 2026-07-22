@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import Logo from '../components/Logo'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -12,7 +13,6 @@ export default function Login() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
 
-  // Reset password
   const [resetEmail, setResetEmail] = useState('')
   const [resetSent, setResetSent] = useState(false)
   const [showReset, setShowReset] = useState(false)
@@ -54,7 +54,11 @@ export default function Login() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '0 20px' }}>
-      <h2>🔐 Login</h2>
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <Logo variant="full" style={{ height: '48px' }} />
+      </div>
+
+      <h2 style={{ textAlign: 'center' }}>🔐 Login</h2>
 
       {!showReset ? (
         <form onSubmit={handleSubmit}>

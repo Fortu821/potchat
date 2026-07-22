@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import Logo from '../components/Logo'
 
 export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState('')
@@ -37,7 +38,11 @@ export default function ResetPassword() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '0 20px' }}>
-      <h2>🔐 Nuova password</h2>
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <Logo variant="full" style={{ height: '48px' }} />
+      </div>
+
+      <h2 style={{ textAlign: 'center' }}>🔐 Nuova password</h2>
 
       {success ? (
         <div>

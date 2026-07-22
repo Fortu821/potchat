@@ -1595,3 +1595,27 @@ h1, h2, h3, h4, h5, h6 {
 .notif-badge {
   animation: bounce 0.5s ease;
 }
+
+/* ----- LOGO ----- */
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo-image {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.sidebar-logo .logo-image {
+  height: 36px;
+}
+
+/* Su mobile, riduci un po' il logo */
+@media (max-width: 768px) {
+  .sidebar-logo .logo-image {
+    height: 28px;
+  }
+}

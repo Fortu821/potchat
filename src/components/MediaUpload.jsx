@@ -12,15 +12,13 @@ export default function MediaUpload({ onUpload, onRemove }) {
   const [preview, setPreview] = useState(null)
   const [fileType, setFileType] = useState(null)
 
-  // Dimensioni massime: 10MB per immagini, 50MB per video
-  const MAX_IMAGE_SIZE = 10 * 1024 * 1024
-  const MAX_VIDEO_SIZE = 50 * 1024 * 1024
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
-    // Verifica dimensione
     const isImage = file.type.startsWith('image/')
     const isVideo = file.type.startsWith('video/')
 
@@ -39,7 +37,7 @@ export default function MediaUpload({ onUpload, onRemove }) {
       return
     }
 
-    // Anteprima locale
+    // Anteprima
     const reader = new FileReader()
     reader.onload = () => {
       setPreview(reader.result)
@@ -47,7 +45,7 @@ export default function MediaUpload({ onUpload, onRemove }) {
     }
     reader.readAsDataURL(file)
 
-    // Carica su Supabase
+    // Upload su Supabase Storage
     setUploading(true)
     setUploadProgress(0)
     setError(null)
@@ -60,22 +58,18 @@ export default function MediaUpload({ onUpload, onRemove }) {
         .from('post-media')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false,
-          onProgress: (progress) => {
-            setUploadProgress(progress.loaded / progress.total * 100)
-          }
+          upsert: false
         })
 
       if (uploadError) throw uploadError
 
-      // Ottieni l'URL pubblico
       const { data: urlData } = supabase.storage
         .from('post-media')
         .getPublicUrl(fileName)
 
+      setUploadProgress(100)
       onUpload(urlData.publicUrl, isImage ? 'image' : 'video')
       setUploading(false)
-      setUploadProgress(100)
 
     } catch (err) {
       console.error('❌ Errore upload:', err)
@@ -98,7 +92,6 @@ export default function MediaUpload({ onUpload, onRemove }) {
 
   return (
     <div className="media-upload">
-      {/* Pulsante di selezione file */}
       <div className="media-upload-trigger" onClick={() => fileInputRef.current?.click()}>
         <span className="media-upload-icon">📎</span>
         <span className="media-upload-text">Allega foto o video</span>
@@ -113,7 +106,6 @@ export default function MediaUpload({ onUpload, onRemove }) {
         disabled={uploading}
       />
 
-      {/* Anteprima */}
       {preview && (
         <div className="media-preview">
           {fileType === 'image' ? (
@@ -131,12 +123,11 @@ export default function MediaUpload({ onUpload, onRemove }) {
         </div>
       )}
 
-      {/* Progresso */}
       {uploading && (
         <div className="media-upload-progress">
           <div 
             className="media-upload-progress-bar"
-            style={{ width: `${uploadProgress}%` }}
+            style={{ width: `${Math.round(uploadProgress)}%` }}
           />
           <span className="media-upload-progress-text">
             {Math.round(uploadProgress)}%
@@ -144,7 +135,6 @@ export default function MediaUpload({ onUpload, onRemove }) {
         </div>
       )}
 
-      {/* Errore */}
       {error && (
         <div className="media-upload-error">
           ⚠️ {error}

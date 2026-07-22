@@ -20,15 +20,12 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [commentingPostId, setCommentingPostId] = useState(null)
 
-  // MEDIA UPLOAD
   const [mediaUrl, setMediaUrl] = useState(null)
   const [mediaType, setMediaType] = useState(null)
 
-  // EDIT POST
   const [editingPostId, setEditingPostId] = useState(null)
   const [editPostContent, setEditPostContent] = useState('')
 
-  // STATS
   const [stats, setStats] = useState({
     totalPosts: 0,
     totalLikesReceived: 0,
@@ -101,7 +98,7 @@ export default function Home() {
     }
   }
 
-  // ----- CARICA STATS PERSONALI -----
+  // ----- CARICA STATS -----
   useEffect(() => {
     async function fetchStats() {
       if (!user) {
@@ -320,7 +317,8 @@ export default function Home() {
             <span className="nav-label">Home</span>
           </NavLink>
 
-          <NavLink to="/search" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          {/* 🔍 CERCA - visibile su desktop */}
+          <NavLink to="/search" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} search-desktop-link`}>
             <span className="nav-icon">🔍</span>
             <span className="nav-label">Cerca</span>
           </NavLink>
@@ -364,7 +362,8 @@ export default function Home() {
       <main className="feed-main">
         <div className="feed-header">
           <h2>📰 Feed</h2>
-          <Link to="/search" className="btn btn-outline btn-sm">
+          {/* 🔍 CERCA - visibile solo su mobile */}
+          <Link to="/search" className="btn btn-outline btn-sm search-mobile-btn">
             🔍 Cerca
           </Link>
         </div>
@@ -393,7 +392,7 @@ export default function Home() {
           </button>
         </div>
 
-        {/* CREAZIONE POST CON MEDIA */}
+        {/* CREAZIONE POST */}
         {user ? (
           <form onSubmit={handleCreatePost} className="card" style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -546,7 +545,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* EDIT POST (solo proprietario) */}
+                {/* EDIT POST */}
                 {isOwnPost && (
                   <div style={{ marginTop: '4px' }}>
                     {editingPostId === post.id ? (
@@ -638,7 +637,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* ========== SIDEBAR DESTRA (STATS) ========== */}
+      {/* ========== SIDEBAR DESTRA ========== */}
       <aside className="sidebar-right">
         <div className="sidebar-card">
           <h4>📊 Le tue stats</h4>

@@ -24,77 +24,90 @@ export default function Profile() {
   const [editAvatarUrl, setEditAvatarUrl] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  // ----- CARICA DATI -----
+  // ----- GESTIONE "me" QUANDO NON LOGGATO -----
   useEffect(() => {
-    async function fetchProfile() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('username', username)
-          .single()
-
-        if (profileError) throw profileError
-        if (!profileData) {
-          setError('Utente non trovato')
-          setLoading(false)
-          return
-        }
-
-        setProfile(profileData)
-        setIsOwnProfile(user?.id === profileData.id)
-
-        const { data: postsData, error: postsError } = await supabase
-          .from('posts_with_counts')
-          .select('*')
-          .eq('user_id', profileData.id)
-          .order('created_at', { ascending: false })
-
-        if (postsError) throw postsError
-        setPosts(postsData || [])
-
-        const { count: followers, error: followersError } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('followed_id', profileData.id)
-
-        if (!followersError) setFollowersCount(followers || 0)
-
-        const { count: following, error: followingError } = await supabase
-          .from('follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('follower_id', profileData.id)
-
-        if (!followingError) setFollowingCount(following || 0)
-
-        if (user && user.id !== profileData.id) {
-          const { data: followData } = await supabase
-            .from('follows')
-            .select('id')
-            .eq('follower_id', user.id)
-            .eq('followed_id', profileData.id)
-            .maybeSingle()
-
-          setIsFollowing(!!followData)
-        }
-
-        setEditDisplayName(profileData.display_name || '')
-        setEditBio(profileData.bio || '')
-        setEditAvatarUrl(profileData.avatar_url || '')
-
-      } catch (err) {
-        console.error('❌ Errore:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+    // Se l'URL è /profile/me e l'utente non è loggato, mostra messaggio
+    if (username === 'me' && !user) {
+      setLoading(false)
+      setError('non_loggato')
+      return
     }
 
-    if (username) fetchProfile()
+    // Se l'URL è /profile/me e l'utente è loggato, reindirizza al suo username
+    if (username === 'me' && user) {
+      navigate(`/profile/${user.username}`, { replace: true })
+      return
+    }
+
+    fetchProfile()
   }, [username, user])
+
+  async function fetchProfile() {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('username', username)
+        .single()
+
+      if (profileError) throw profileError
+      if (!profileData) {
+        setError('Utente non trovato')
+        setLoading(false)
+        return
+      }
+
+      setProfile(profileData)
+      setIsOwnProfile(user?.id === profileData.id)
+
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts_with_counts')
+        .select('*')
+        .eq('user_id', profileData.id)
+        .order('created_at', { ascending: false })
+
+      if (postsError) throw postsError
+      setPosts(postsData || [])
+
+      const { count: followers, error: followersError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('followed_id', profileData.id)
+
+      if (!followersError) setFollowersCount(followers || 0)
+
+      const { count: following, error: followingError } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', profileData.id)
+
+      if (!followingError) setFollowingCount(following || 0)
+
+      if (user && user.id !== profileData.id) {
+        const { data: followData } = await supabase
+          .from('follows')
+          .select('id')
+          .eq('follower_id', user.id)
+          .eq('followed_id', profileData.id)
+          .maybeSingle()
+
+        setIsFollowing(!!followData)
+      }
+
+      setEditDisplayName(profileData.display_name || '')
+      setEditBio(profileData.bio || '')
+      setEditAvatarUrl(profileData.avatar_url || '')
+
+    } catch (err) {
+      console.error('❌ Errore:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // ----- SEGUI -----
   async function handleFollow() {
@@ -189,9 +202,37 @@ export default function Profile() {
   }
 
   // ----- RENDER -----
-  if (loading) return <div className="app-container text-center" style={{ paddingTop: '60px' }}>⏳ Caricamento...</div>
-  if (error) return <div className="app-container text-center" style={{ paddingTop: '60px', color: 'var(--color-danger)' }}>❌ {error}</div>
-  if (!profile) return <div className="app-container text-center" style={{ paddingTop: '60px' }}>👤 Utente non trovato</div>
+  if (loading) {
+    return <div className="app-container text-center" style={{ paddingTop: '60px' }}>⏳ Caricamento...</div>
+  }
+
+  // 👇 CASO: non loggato e clicca su "Profilo"
+  if (error === 'non_loggato') {
+    return (
+      <div className="app-container" style={{ maxWidth: '400px', margin: '40px auto', textAlign: 'center' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔒</div>
+        <h2>Non sei loggato!</h2>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: '20px' }}>
+          Accedi o registrati per visualizzare il tuo profilo.
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <Link to="/login" className="btn btn-primary">Accedi</Link>
+          <Link to="/signup" className="btn btn-secondary">Registrati</Link>
+        </div>
+        <p style={{ marginTop: '20px' }}>
+          <Link to="/">← Torna alla home</Link>
+        </p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return <div className="app-container text-center" style={{ paddingTop: '60px', color: 'var(--color-danger)' }}>❌ {error}</div>
+  }
+
+  if (!profile) {
+    return <div className="app-container text-center" style={{ paddingTop: '60px' }}>👤 Utente non trovato</div>
+  }
 
   return (
     <div className="app-container">

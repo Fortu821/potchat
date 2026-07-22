@@ -1452,3 +1452,32 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.8rem;
   color: var(--color-danger);
 }
+
+/* ============================================================
+   RICERCA - VISIBILITÀ PER DISPOSITIVO
+   ============================================================ */
+
+/* Su desktop (> 768px): mostra solo il link nella sidebar */
+.search-mobile-btn {
+  display: none;
+}
+
+/* Su mobile (< 768px): mostra solo il pulsante nell'header */
+@media (max-width: 768px) {
+  .search-desktop-link {
+    display: none !important;
+  }
+  .search-mobile-btn {
+    display: inline-flex;
+  }
+}
+
+/* Per schermi medi (tra 768px e 1024px) mostriamo entrambi? No, teniamo solo desktop */
+@media (min-width: 769px) {
+  .search-desktop-link {
+    display: flex !important;
+  }
+  .search-mobile-btn {
+    display: none !important;
+  }
+}

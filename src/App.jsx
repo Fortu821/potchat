@@ -1,4 +1,5 @@
 // src/App.jsx
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Home from './pages/Home'
@@ -10,12 +11,25 @@ import Chats from './pages/Chats'
 import Chat from './pages/Chat'
 import Search from './pages/Search'
 import ResetPassword from './pages/ResetPassword'
-// import Moderation from './pages/Moderation'  // COMMENTATO PER ORA
+import Feedback from './pages/Feedback'
+import WelcomeModal from './components/WelcomeModal'
 
 function App() {
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  useEffect(() => {
+    const hasSeen = localStorage.getItem('potchat_welcome_seen')
+    if (!hasSeen) {
+      setShowWelcome(true)
+    }
+  }, [])
+
   return (
     <BrowserRouter>
       <AuthProvider>
+        {showWelcome && (
+          <WelcomeModal onClose={() => setShowWelcome(false)} />
+        )}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -26,7 +40,7 @@ function App() {
           <Route path="/chat/:conversationId" element={<Chat />} />
           <Route path="/search" element={<Search />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          {/* <Route path="/moderation" element={<Moderation />} /> */}
+          <Route path="/feedback" element={<Feedback />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

@@ -23,6 +23,9 @@ export default function Profile() {
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editBio, setEditBio] = useState('')
   const [editAvatarUrl, setEditAvatarUrl] = useState('')
+  const [editCommonName, setEditCommonName] = useState('')
+  const [editScientificName, setEditScientificName] = useState('')
+  const [editPlantLocation, setEditPlantLocation] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const avatarInputRef = useRef(null)
@@ -100,6 +103,9 @@ export default function Profile() {
       setEditDisplayName(profileData.display_name || '')
       setEditBio(profileData.bio || '')
       setEditAvatarUrl(profileData.avatar_url || '')
+      setEditCommonName(profileData.common_name || '')
+      setEditScientificName(profileData.scientific_name || '')
+      setEditPlantLocation(profileData.plant_location || '')
 
     } catch (err) {
       console.error('❌ Errore:', err)
@@ -237,7 +243,10 @@ export default function Profile() {
         .update({
           display_name: editDisplayName.trim() || null,
           bio: editBio.trim() || null,
-          avatar_url: editAvatarUrl.trim() || null
+          avatar_url: editAvatarUrl.trim() || null,
+          common_name: editCommonName.trim() || null,
+          scientific_name: editScientificName.trim() || null,
+          plant_location: editPlantLocation.trim() || null
         })
         .eq('id', user.id)
 
@@ -247,7 +256,10 @@ export default function Profile() {
         ...profile,
         display_name: editDisplayName.trim() || null,
         bio: editBio.trim() || null,
-        avatar_url: editAvatarUrl.trim() || null
+        avatar_url: editAvatarUrl.trim() || null,
+        common_name: editCommonName.trim() || null,
+        scientific_name: editScientificName.trim() || null,
+        plant_location: editPlantLocation.trim() || null
       })
 
       setIsEditing(false)
@@ -341,7 +353,24 @@ export default function Profile() {
 
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
 
-        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+        {/* 🌱 CAMPIONI BOTANICI */}
+        {profile.common_name && (
+          <p style={{ margin: '4px 0', fontSize: '0.95rem' }}>
+            🌿 <strong>Nome comune:</strong> {profile.common_name}
+          </p>
+        )}
+        {profile.scientific_name && (
+          <p style={{ margin: '4px 0', fontSize: '0.95rem' }}>
+            🔬 <strong>Nome scientifico:</strong> <em>{profile.scientific_name}</em>
+          </p>
+        )}
+        {profile.plant_location && (
+          <p style={{ margin: '4px 0', fontSize: '0.95rem' }}>
+            📍 <strong>Vive:</strong> {profile.plant_location}
+          </p>
+        )}
+
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '8px' }}>
           Iscritto il {new Date(profile.created_at).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
 
@@ -418,6 +447,46 @@ export default function Profile() {
               placeholder="Parla di te..."
               rows={3}
               className="textarea"
+            />
+          </div>
+
+          {/* 🌱 CAMPI BOTANICI */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              🌿 Nome comune (come pianta)
+            </label>
+            <input
+              type="text"
+              value={editCommonName}
+              onChange={(e) => setEditCommonName(e.target.value)}
+              placeholder="Es. Ficus Benjamin"
+              className="input"
+            />
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              🔬 Nome scientifico
+            </label>
+            <input
+              type="text"
+              value={editScientificName}
+              onChange={(e) => setEditScientificName(e.target.value)}
+              placeholder="Es. Ficus benjamina"
+              className="input"
+            />
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              📍 Dove vivi (come pianta)
+            </label>
+            <input
+              type="text"
+              value={editPlantLocation}
+              onChange={(e) => setEditPlantLocation(e.target.value)}
+              placeholder="Es. Vaso rosso sul davanzale"
+              className="input"
             />
           </div>
 

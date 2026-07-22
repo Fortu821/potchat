@@ -396,7 +396,7 @@ export default function Home() {
         <div className="sidebar-logo">
           <Link to="/">
             <span className="emoji">🌱</span>
-            <span className="highlight">Pianta</span>Social
+            <span className="highlight">Pot</span>Chat
           </Link>
         </div>
 
@@ -416,6 +416,10 @@ export default function Home() {
           <NavLink to="/chats" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">💬</span>
             <span className="nav-label">Messaggi</span>
+          </NavLink>
+          <NavLink to="/feedback" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <span className="nav-icon">💬</span>
+            <span className="nav-label">Feedback</span>
           </NavLink>
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
@@ -762,7 +766,7 @@ export default function Home() {
         </div>
         <div className="sidebar-card" style={{ marginTop: '12px', textAlign: 'center' }}>
           <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-            🌱 PiantaSocial • {new Date().getFullYear()}
+            🌱 PotChat • {new Date().getFullYear()}
           </p>
         </div>
       </aside>

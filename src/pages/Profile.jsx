@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { parseText } from '../utils/textParser'
 
 export default function Profile() {
   const { username } = useParams()
@@ -143,7 +144,6 @@ export default function Profile() {
 
       const avatarUrl = urlData.publicUrl
 
-      // Aggiorna il profilo
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
@@ -228,7 +228,6 @@ export default function Profile() {
     e.preventDefault()
     if (!user || user.id !== profile.id) return
 
-    // ✅ CONFERMA
     if (!confirm('✏️ Sei sicuro di voler salvare le modifiche al profilo?')) return
 
     setIsSaving(true)
@@ -263,7 +262,9 @@ export default function Profile() {
 
   // ----- RENDER -----
   if (loading) {
-    return <div className="app-container text-center" style={{ paddingTop: '60px' }}>⏳ Caricamento...</div>
+    return <div className="app-container text-center" style={{ paddingTop: '60px' }}>
+      <div className="text-muted loading-pulse">⏳ Caricamento...</div>
+    </div>
   }
 
   if (error === 'non_loggato') {
@@ -481,9 +482,9 @@ export default function Profile() {
 
           return (
             <div key={post.id} className="card">
-              <p style={{ margin: '0 0 8px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {post.content}
-              </p>
+              <div style={{ margin: '0 0 8px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {parseText(post.content)}
+              </div>
 
               {post.media_url && (
                 <div className="post-media" style={{ marginTop: '8px' }}>

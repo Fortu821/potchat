@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { parseText } from '../utils/textParser'
 
 export default function Comments({ postId }) {
   const { user } = useAuth()
@@ -68,7 +69,6 @@ export default function Comments({ postId }) {
     }
     if (!newComment.trim()) return
 
-    // ✅ CONFERMA
     if (!confirm('💬 Sei sicuro di voler pubblicare questo commento?')) return
 
     setIsSubmitting(true)
@@ -98,7 +98,6 @@ export default function Comments({ postId }) {
   async function handleEditComment(commentId) {
     if (!editCommentContent.trim()) return
 
-    // ✅ CONFERMA
     if (!confirm('✏️ Sei sicuro di voler modificare questo commento?')) return
 
     try {
@@ -125,6 +124,7 @@ export default function Comments({ postId }) {
 
     return (
       <div
+        className="comment-item"
         style={{
           marginLeft: depth > 0 ? '24px' : '0',
           padding: '8px 0 8px 12px',
@@ -193,9 +193,9 @@ export default function Comments({ postId }) {
             </button>
           </div>
         ) : (
-          <p style={{ margin: '2px 0 4px 36px', fontSize: '0.95rem', wordBreak: 'break-word' }}>
-            {comment.content}
-          </p>
+          <div style={{ margin: '2px 0 4px 36px', fontSize: '0.95rem', wordBreak: 'break-word' }}>
+            {parseText(comment.content)}
+          </div>
         )}
 
         <div style={{ marginLeft: '36px', display: 'flex', gap: '12px', fontSize: '0.8rem', marginTop: '2px' }}>

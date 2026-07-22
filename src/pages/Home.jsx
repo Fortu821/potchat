@@ -7,6 +7,7 @@ import Comments from '../components/Comments'
 import ThemeToggle from '../components/ThemeToggle'
 import ReportButton from '../components/ReportButton'
 import MediaUpload from '../components/MediaUpload'
+import { parseText } from '../utils/textParser'
 
 export default function Home() {
   const { user, signOut } = useAuth()
@@ -56,12 +57,10 @@ export default function Home() {
   useEffect(() => {
     if (!user) return
 
-    // Richiedi permesso per le notifiche push
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
 
-    // Ascolta le notifiche in tempo reale
     const channel = supabase
       .channel('push-notifications')
       .on(
@@ -97,7 +96,7 @@ export default function Home() {
     return () => channel.unsubscribe()
   }, [user])
 
-  // ----- CARICA POST (iniziale) -----
+  // ----- CARICA POST -----
   useEffect(() => {
     setPage(0)
     setPosts([])
@@ -258,7 +257,6 @@ export default function Home() {
       return
     }
 
-    // ✅ CONFERMA
     if (!confirm('📝 Sei sicuro di voler pubblicare questo post?')) return
 
     setIsSubmitting(true)
@@ -290,7 +288,6 @@ export default function Home() {
   async function handleEditPost(postId) {
     if (!editPostContent.trim()) return
 
-    // ✅ CONFERMA
     if (!confirm('✏️ Sei sicuro di voler modificare questo post?')) return
 
     try {
@@ -380,7 +377,7 @@ export default function Home() {
   if (loading && posts.length === 0) {
     return (
       <div className="app-container text-center" style={{ paddingTop: '60px' }}>
-        <div className="text-muted">⏳ Caricamento...</div>
+        <div className="text-muted loading-pulse">⏳ Caricamento...</div>
       </div>
     )
   }
@@ -488,7 +485,7 @@ export default function Home() {
                 <textarea
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Cosa bolle in pentola? 🌱"
+                  placeholder="Cosa bolle in pentola? 🌱 (usa @ per menzionare, # per hashtag)"
                   rows={3}
                   className="textarea"
                 />
@@ -590,7 +587,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="card-content">{post.content}</div>
+                <div className="card-content">{parseText(post.content)}</div>
 
                 {post.media_url && (
                   <div className="post-media" style={{ marginTop: '8px' }}>
@@ -716,7 +713,7 @@ export default function Home() {
 
         {loadingMore && (
           <div className="text-muted" style={{ textAlign: 'center', padding: '20px' }}>
-            ⏳ Caricamento altri post...
+            <span className="loading-pulse">⏳ Caricamento altri post...</span>
           </div>
         )}
       </main>
@@ -732,7 +729,7 @@ export default function Home() {
             </div>
           ) : statsLoading ? (
             <div className="text-muted" style={{ fontSize: '0.85rem', textAlign: 'center' }}>
-              ⏳ Caricamento...
+              <span className="loading-pulse">⏳ Caricamento...</span>
             </div>
           ) : (
             <div className="stats-grid">

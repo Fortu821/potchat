@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { parseText } from '../utils/textParser'
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -22,6 +23,23 @@ export default function Search() {
     async function search() {
       setLoading(true)
       try {
+        // Se la query inizia con #, cerca solo hashtag nei post
+        if (query.startsWith('#')) {
+          const cleanTag = query.slice(1)
+          const { data: postsData } = await supabase
+            .from('posts_with_counts')
+            .select('*')
+            .ilike('content', `%#${cleanTag}%`)
+            .order('created_at', { ascending: false })
+            .limit(20)
+
+          setPosts(postsData || [])
+          setUsers([])
+          setLoading(false)
+          return
+        }
+
+        // Cerca utenti
         const { data: usersData } = await supabase
           .from('profiles')
           .select('id, username, display_name, avatar_url')
@@ -30,6 +48,7 @@ export default function Search() {
 
         setUsers(usersData || [])
 
+        // Cerca post
         const { data: postsData } = await supabase
           .from('posts_with_counts')
           .select('*')
@@ -70,7 +89,7 @@ export default function Search() {
             type="text"
             name="q"
             defaultValue={query}
-            placeholder="Cerca utenti o post..."
+            placeholder="Cerca utenti, post o hashtag (#...)"
             className="input"
             style={{ flex: 1 }}
           />
@@ -109,7 +128,7 @@ export default function Search() {
 
           {loading ? (
             <div className="text-muted" style={{ textAlign: 'center', padding: '40px' }}>
-              ⏳ Ricerca in corso...
+              <span className="loading-pulse">⏳ Ricerca in corso...</span>
             </div>
           ) : (
             <>
@@ -167,7 +186,7 @@ export default function Search() {
                             </Link>
                           </div>
                         </div>
-                        <div className="card-content">{post.content}</div>
+                        <div className="card-content">{parseText(post.content)}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
                           ❤️ {post.likes_count || 0} • 💬 {post.comments_count || 0} • 🔄 {post.reposts_count || 0}
                         </div>

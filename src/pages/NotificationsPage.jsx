@@ -34,15 +34,12 @@ export default function NotificationsPage() {
         if (error) throw error
         setNotifications(data || [])
 
-        // Segna tutte come lette
-        if (data && data.length > 0) {
-          const unreadIds = data.filter(n => !n.read).map(n => n.id)
-          if (unreadIds.length > 0) {
-            await supabase
-              .from('notifications')
-              .update({ read: true })
-              .in('id', unreadIds)
-          }
+        const unreadIds = data?.filter(n => !n.read).map(n => n.id) || []
+        if (unreadIds.length > 0) {
+          await supabase
+            .from('notifications')
+            .update({ read: true })
+            .in('id', unreadIds)
         }
 
       } catch (err) {
@@ -55,17 +52,25 @@ export default function NotificationsPage() {
     fetchAllNotifications()
   }, [user])
 
-  if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>⏳ Caricamento...</div>
+  if (loading) {
+    return <div className="app-container text-center" style={{ paddingTop: '60px' }}>
+      <div className="text-muted loading-pulse">⏳ Caricamento notifiche...</div>
+    </div>
+  }
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+    <div className="app-container">
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
         <Link to="/" style={{ fontSize: '1.5rem', textDecoration: 'none' }}>←</Link>
         <h1 style={{ margin: 0 }}>🔔 Tutte le notifiche</h1>
       </div>
 
       {notifications.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#888' }}>Nessuna notifica</p>
+        <div className="empty-state">
+          <span className="emoji">🔕</span>
+          <h3>Nessuna notifica</h3>
+          <p>Quando qualcuno interagirà con te, apparirà qui.</p>
+        </div>
       ) : (
         notifications.map((n) => {
           const actor = n.actor
@@ -83,13 +88,14 @@ export default function NotificationsPage() {
           return (
             <div
               key={n.id}
+              className={`notification-item ${!n.read ? 'unread' : ''}`}
               style={{
                 padding: '12px 16px',
-                borderBottom: '1px solid #eee',
+                borderBottom: '1px solid var(--color-border)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                backgroundColor: n.read ? 'transparent' : '#f0f7ff'
+                backgroundColor: n.read ? 'transparent' : 'var(--color-primary-bg)'
               }}
             >
               {actor?.avatar_url ? (
@@ -99,14 +105,14 @@ export default function NotificationsPage() {
                   style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
                 />
               ) : (
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#ccc' }} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />
               )}
               <div>
                 <Link to={`/profile/${actor?.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <strong>{actorName}</strong>
                 </Link>
                 <span style={{ marginLeft: '4px' }}>{message}</span>
-                <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
                   {new Date(n.created_at).toLocaleString('it-IT', {
                     hour: '2-digit',
                     minute: '2-digit',

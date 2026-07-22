@@ -1,5 +1,5 @@
 // src/pages/Profile.jsx
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -23,17 +23,16 @@ export default function Profile() {
   const [editBio, setEditBio] = useState('')
   const [editAvatarUrl, setEditAvatarUrl] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef(null)
 
-  // ----- GESTIONE "me" QUANDO NON LOGGATO -----
   useEffect(() => {
-    // Se l'URL è /profile/me e l'utente non è loggato, mostra messaggio
     if (username === 'me' && !user) {
       setLoading(false)
       setError('non_loggato')
       return
     }
 
-    // Se l'URL è /profile/me e l'utente è loggato, reindirizza al suo username
     if (username === 'me' && user) {
       navigate(`/profile/${user.username}`, { replace: true })
       return
@@ -109,6 +108,64 @@ export default function Profile() {
     }
   }
 
+  // ----- UPLOAD AVATAR -----
+  async function handleAvatarUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Seleziona un\'immagine valida')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('L\'immagine non deve superare i 5MB')
+      return
+    }
+
+    setIsUploadingAvatar(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `avatars/${user.id}/${Date.now()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName)
+
+      const avatarUrl = urlData.publicUrl
+
+      // Aggiorna il profilo
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      setEditAvatarUrl(avatarUrl)
+      setProfile({ ...profile, avatar_url: avatarUrl })
+      alert('✅ Avatar aggiornato!')
+
+    } catch (err) {
+      console.error('❌ Errore upload avatar:', err)
+      alert('Errore durante il caricamento dell\'avatar')
+    } finally {
+      setIsUploadingAvatar(false)
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = ''
+      }
+    }
+  }
+
   // ----- SEGUI -----
   async function handleFollow() {
     if (!user) {
@@ -171,6 +228,9 @@ export default function Profile() {
     e.preventDefault()
     if (!user || user.id !== profile.id) return
 
+    // ✅ CONFERMA
+    if (!confirm('✏️ Sei sicuro di voler salvare le modifiche al profilo?')) return
+
     setIsSaving(true)
     try {
       const { error } = await supabase
@@ -206,7 +266,6 @@ export default function Profile() {
     return <div className="app-container text-center" style={{ paddingTop: '60px' }}>⏳ Caricamento...</div>
   }
 
-  // 👇 CASO: non loggato e clicca su "Profilo"
   if (error === 'non_loggato') {
     return (
       <div className="app-container" style={{ maxWidth: '400px', margin: '40px auto', textAlign: 'center' }}>
@@ -237,11 +296,44 @@ export default function Profile() {
   return (
     <div className="app-container">
       <div className="profile-header">
-        {profile.avatar_url ? (
-          <img src={profile.avatar_url} alt={profile.username} className="avatar-large" />
-        ) : (
-          <div className="avatar-large-placeholder">🌱</div>
-        )}
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.username} className="avatar-large" />
+          ) : (
+            <div className="avatar-large-placeholder">🌱</div>
+          )}
+          {isOwnProfile && (
+            <>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                style={{ display: 'none' }}
+                disabled={isUploadingAvatar}
+              />
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  position: 'absolute',
+                  bottom: '0',
+                  right: '0',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  padding: '0',
+                  fontSize: '1rem',
+                  boxShadow: 'var(--shadow-md)'
+                }}
+                disabled={isUploadingAvatar}
+                title="Cambia avatar"
+              >
+                {isUploadingAvatar ? '⏳' : '📷'}
+              </button>
+            </>
+          )}
+        </div>
 
         <h2 className="profile-name">{profile.display_name || profile.username}</h2>
         <p className="profile-username">@{profile.username}</p>
@@ -332,15 +424,26 @@ export default function Profile() {
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
               URL avatar
             </label>
-            <input
-              type="text"
-              value={editAvatarUrl}
-              onChange={(e) => setEditAvatarUrl(e.target.value)}
-              placeholder="https://esempio.com/avatar.jpg"
-              className="input"
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={editAvatarUrl}
+                onChange={(e) => setEditAvatarUrl(e.target.value)}
+                placeholder="https://esempio.com/avatar.jpg"
+                className="input"
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="btn btn-secondary btn-sm"
+                disabled={isUploadingAvatar}
+              >
+                {isUploadingAvatar ? '⏳' : '📷 Carica'}
+              </button>
+            </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-              Usa <a href="https://ui-avatars.com/" target="_blank" rel="noopener noreferrer">ui-avatars.com</a> per generare un avatar.
+              Puoi caricare un'immagine o inserire un URL.
             </p>
           </div>
 

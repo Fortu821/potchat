@@ -13,82 +13,86 @@ export default function ChatRoom() {
   const [loading, setLoading] = useState(true)
   const [newMessage, setNewMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const messagesEndRef = useRef(null)
+  const channelRef = useRef(null)
 
   // ----- SCROLL IN BASSO -----
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ----- CARICA MESSAGGI E PARTECIPANTI (query separate) -----
-  useEffect(() => {
+  // ----- CARICA MESSAGGI -----
+  async function fetchMessages() {
     if (!user || !conversationId) return
 
-    let isMounted = true
+    setIsRefreshing(true)
+    try {
+      // 1. Prende i messaggi
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
 
-    async function fetchChatData() {
-      try {
-        // 1. Prende i messaggi
-        const { data: messagesData, error: messagesError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true })
+      if (messagesError) throw messagesError
 
-        if (messagesError) throw messagesError
+      // 2. Prende i partecipanti
+      const { data: participants, error: participantsError } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', conversationId)
 
-        // 2. Prende SOLO gli user_id dei partecipanti
-        const { data: participants, error: participantsError } = await supabase
-          .from('conversation_participants')
-          .select('user_id')
-          .eq('conversation_id', conversationId)
+      if (participantsError) throw participantsError
 
-        if (participantsError) throw participantsError
+      // 3. Trova l'altro utente
+      const otherUserId = participants?.find(p => p.user_id !== user.id)?.user_id
+      let otherProfile = null
 
-        // 3. Trova l'ID dell'altro utente (diverso da me)
-        const otherUserId = participants?.find(p => p.user_id !== user.id)?.user_id
+      if (otherUserId) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .eq('id', otherUserId)
+          .single()
 
-        // 4. Prende il profilo dell'altro utente
-        let otherProfile = null
-        if (otherUserId) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .eq('id', otherUserId)
-            .single()
-
-          if (!profileError) otherProfile = profile
-        }
-
-        if (isMounted) {
-          setMessages(messagesData || [])
-          setOtherUser(otherProfile)
-        }
-
-        // 5. Segna i messaggi come letti
-        const unreadIds = messagesData
-          ?.filter(m => m.sender_id !== user.id && m.read_at === null)
-          .map(m => m.id) || []
-
-        if (unreadIds.length > 0) {
-          await supabase
-            .from('messages')
-            .update({ read_at: new Date().toISOString() })
-            .in('id', unreadIds)
-        }
-
-      } catch (err) {
-        console.error('❌ Errore caricamento chat:', err)
-        alert('Errore nel caricamento della chat')
-      } finally {
-        if (isMounted) setLoading(false)
+        if (!profileError) otherProfile = profile
       }
+
+      setMessages(messagesData || [])
+      setOtherUser(otherProfile)
+
+      // 4. Segna come letti
+      const unreadIds = messagesData
+        ?.filter(m => m.sender_id !== user.id && m.read_at === null)
+        .map(m => m.id) || []
+
+      if (unreadIds.length > 0) {
+        await supabase
+          .from('messages')
+          .update({ read_at: new Date().toISOString() })
+          .in('id', unreadIds)
+      }
+
+    } catch (err) {
+      console.error('❌ Errore caricamento chat:', err)
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
     }
+  }
 
-    fetchChatData()
+  // ----- CARICA ALL'AVVIO -----
+  useEffect(() => {
+    fetchMessages()
+  }, [conversationId, user])
 
-    // ----- REAL-TIME: ascolta nuovi messaggi -----
+  // ----- REAL-TIME (con fallback) -----
+  useEffect(() => {
+    if (!conversationId || !user) return
+
+    // Sottoscrizione al canale
     const channel = supabase
       .channel(`chat-${conversationId}`)
       .on(
@@ -101,8 +105,12 @@ export default function ChatRoom() {
         },
         (payload) => {
           const newMsg = payload.new
+          console.log('📩 Nuovo messaggio ricevuto in real-time:', newMsg)
+
+          // Aggiunge il messaggio alla lista
           setMessages(prev => [...prev, newMsg])
 
+          // Segna come letto se non è mio
           if (newMsg.sender_id !== user.id) {
             supabase
               .from('messages')
@@ -116,10 +124,18 @@ export default function ChatRoom() {
       )
       .subscribe((status) => {
         console.log('🔌 Chat channel status:', status)
+        // Se il canale non si sottoscrive, ricarica manualmente dopo 2 secondi
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setTimeout(() => {
+            console.log('🔄 Fallback: refresh manuale dei messaggi')
+            fetchMessages()
+          }, 2000)
+        }
       })
 
+    channelRef.current = channel
+
     return () => {
-      isMounted = false
       channel.unsubscribe()
     }
   }, [conversationId, user])
@@ -146,7 +162,15 @@ export default function ChatRoom() {
         })
 
       if (error) throw error
+
       setNewMessage('')
+
+      // 🔄 FORZA IL REFRESH DEI MESSAGGI (fallback)
+      // Aspetta 500ms poi ricarica per sicurezza
+      setTimeout(() => {
+        fetchMessages()
+      }, 500)
+
     } catch (err) {
       console.error('❌ Errore invio messaggio:', err)
       alert('Errore nell\'invio del messaggio')
@@ -182,6 +206,12 @@ export default function ChatRoom() {
           <span className="chat-room-name">
             {otherUser?.display_name || otherUser?.username || 'Utente'}
           </span>
+          {/* Indica se la connessione real-time è attiva */}
+          {isRefreshing && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+              ↻
+            </span>
+          )}
         </div>
       </div>
 

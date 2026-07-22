@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -13,9 +13,11 @@ export default function Home() {
 
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('recent')
-
+  const [page, setPage] = useState(0)
   const [newPostContent, setNewPostContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [commentingPostId, setCommentingPostId] = useState(null)
@@ -36,17 +38,82 @@ export default function Home() {
   })
   const [statsLoading, setStatsLoading] = useState(true)
 
-  // ----- CARICA POST -----
+  const observerRef = useRef()
+  const lastPostRef = useCallback((node) => {
+    if (loading || loadingMore) return
+    if (observerRef.current) observerRef.current.disconnect()
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMorePosts()
+      }
+    })
+    if (node) observerRef.current.observe(node)
+  }, [loading, loadingMore, hasMore])
+
+  const POSTS_PER_PAGE = 10
+
+  // ----- NOTIFICHE PUSH -----
   useEffect(() => {
-    fetchPosts(filter)
+    if (!user) return
+
+    // Richiedi permesso per le notifiche push
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    // Ascolta le notifiche in tempo reale
+    const channel = supabase
+      .channel('push-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          const notif = payload.new
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const actorName = notif.actor_id?.display_name || 'Qualcuno'
+            let message = ''
+            switch (notif.type) {
+              case 'like': message = 'ha messo like al tuo post'; break
+              case 'comment': message = 'ha commentato il tuo post'; break
+              case 'repost': message = 'ha repostato il tuo post'; break
+              case 'follow': message = 'ti ha seguito'; break
+              default: message = 'ha interagito con te'
+            }
+            new Notification(`🌱 ${actorName} ${message}`, {
+              icon: '/favicon.ico',
+              tag: notif.id,
+              requireInteraction: true
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => channel.unsubscribe()
+  }, [user])
+
+  // ----- CARICA POST (iniziale) -----
+  useEffect(() => {
+    setPage(0)
+    setPosts([])
+    setHasMore(true)
+    fetchPosts(filter, 0, true)
   }, [filter])
 
-  async function fetchPosts(selectedFilter) {
+  async function fetchPosts(selectedFilter, pageNum = 0, reset = false) {
     setLoading(true)
     setError(null)
 
     try {
-      let query = supabase.from('posts_with_counts').select('*')
+      let query = supabase
+        .from('posts_with_counts')
+        .select('*')
+        .range(pageNum * POSTS_PER_PAGE, (pageNum + 1) * POSTS_PER_PAGE - 1)
 
       if (selectedFilter === 'following') {
         if (!user) {
@@ -66,6 +133,7 @@ export default function Home() {
 
         if (followedIds.length === 0) {
           setPosts([])
+          setHasMore(false)
           setLoading(false)
           return
         }
@@ -89,13 +157,29 @@ export default function Home() {
       const { data, error: queryError } = await query
 
       if (queryError) throw queryError
-      setPosts(data || [])
+
+      if (reset) {
+        setPosts(data || [])
+      } else {
+        setPosts(prev => [...prev, ...(data || [])])
+      }
+
+      setHasMore((data || []).length === POSTS_PER_PAGE)
+      setPage(pageNum + 1)
+
     } catch (err) {
       console.error('❌ Errore nel caricamento dei post:', err)
       setError(err.message)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
+  }
+
+  async function loadMorePosts() {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    await fetchPosts(filter, page, false)
   }
 
   // ----- CARICA STATS -----
@@ -156,7 +240,10 @@ export default function Home() {
   }, [user])
 
   async function refreshPosts() {
-    await fetchPosts(filter)
+    setPage(0)
+    setPosts([])
+    setHasMore(true)
+    await fetchPosts(filter, 0, true)
   }
 
   // ----- CREA POST -----
@@ -170,6 +257,9 @@ export default function Home() {
       alert('Scrivi qualcosa o allega un file')
       return
     }
+
+    // ✅ CONFERMA
+    if (!confirm('📝 Sei sicuro di voler pubblicare questo post?')) return
 
     setIsSubmitting(true)
     try {
@@ -199,6 +289,9 @@ export default function Home() {
   // ----- EDIT POST -----
   async function handleEditPost(postId) {
     if (!editPostContent.trim()) return
+
+    // ✅ CONFERMA
+    if (!confirm('✏️ Sei sicuro di voler modificare questo post?')) return
 
     try {
       const { error } = await supabase
@@ -284,7 +377,7 @@ export default function Home() {
   }
 
   // ----- RENDER -----
-  if (loading) {
+  if (loading && posts.length === 0) {
     return (
       <div className="app-container text-center" style={{ paddingTop: '60px' }}>
         <div className="text-muted">⏳ Caricamento...</div>
@@ -302,7 +395,6 @@ export default function Home() {
 
   return (
     <div className="home-layout">
-      {/* ========== SIDEBAR SINISTRA ========== */}
       <aside className="sidebar-left">
         <div className="sidebar-logo">
           <Link to="/">
@@ -316,23 +408,18 @@ export default function Home() {
             <span className="nav-icon">🏠</span>
             <span className="nav-label">Home</span>
           </NavLink>
-
-          {/* 🔍 CERCA - visibile su desktop */}
           <NavLink to="/search" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} search-desktop-link`}>
             <span className="nav-icon">🔍</span>
             <span className="nav-label">Cerca</span>
           </NavLink>
-
           <NavLink to="/notifications" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">🔔</span>
             <span className="nav-label">Notifiche</span>
           </NavLink>
-
           <NavLink to="/chats" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">💬</span>
             <span className="nav-label">Messaggi</span>
           </NavLink>
-
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
             <span className="nav-label">Profilo</span>
@@ -358,17 +445,14 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* ========== FEED CENTRALE ========== */}
       <main className="feed-main">
         <div className="feed-header">
           <h2>📰 Feed</h2>
-          {/* 🔍 CERCA - visibile solo su mobile */}
           <Link to="/search" className="btn btn-outline btn-sm search-mobile-btn">
             🔍 Cerca
           </Link>
         </div>
 
-        {/* FILTRI */}
         <div className="filter-bar">
           <button
             onClick={() => setFilter('recent')}
@@ -392,7 +476,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* CREAZIONE POST */}
         {user ? (
           <form onSubmit={handleCreatePost} className="card" style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -409,7 +492,6 @@ export default function Home() {
                   rows={3}
                   className="textarea"
                 />
-
                 <MediaUpload
                   onUpload={(url, type) => {
                     setMediaUrl(url)
@@ -420,13 +502,11 @@ export default function Home() {
                     setMediaType(null)
                   }}
                 />
-
                 {mediaUrl && (
                   <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
                     ✅ File caricato: {mediaType === 'image' ? '📷 Immagine' : '🎬 Video'}
                   </div>
                 )}
-
                 <button
                   type="submit"
                   disabled={isSubmitting || (!newPostContent.trim() && !mediaUrl)}
@@ -446,7 +526,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* LISTA POST */}
         {posts.length === 0 ? (
           <div className="empty-state">
             {filter === 'following' ? (
@@ -470,10 +549,11 @@ export default function Home() {
             )}
           </div>
         ) : (
-          posts.map((post) => {
+          posts.map((post, index) => {
             const isLiked = post.is_liked_by_user || false
             const isReposted = post.is_reposted_by_user || false
             const isCommenting = commentingPostId === post.id
+            const isOwnPost = user && user.id === post.user_id
 
             let mediaType = post.media_type
             if (post.media_url && !mediaType) {
@@ -484,10 +564,12 @@ export default function Home() {
               }
             }
 
-            const isOwnPost = user && user.id === post.user_id
-
             return (
-              <div key={post.id} className="card">
+              <div
+                key={post.id}
+                className="card"
+                ref={index === posts.length - 1 ? lastPostRef : null}
+              >
                 <div className="card-header">
                   <Link to={`/profile/${post.username}`}>
                     {post.avatar_url ? (
@@ -545,7 +627,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* EDIT POST */}
                 {isOwnPost && (
                   <div style={{ marginTop: '4px' }}>
                     {editingPostId === post.id ? (
@@ -619,10 +700,7 @@ export default function Home() {
                   </button>
 
                   {user && (
-                    <ReportButton
-                      targetType="post"
-                      targetId={post.id}
-                    />
+                    <ReportButton targetType="post" targetId={post.id} />
                   )}
                 </div>
 
@@ -635,13 +713,17 @@ export default function Home() {
             )
           })
         )}
+
+        {loadingMore && (
+          <div className="text-muted" style={{ textAlign: 'center', padding: '20px' }}>
+            ⏳ Caricamento altri post...
+          </div>
+        )}
       </main>
 
-      {/* ========== SIDEBAR DESTRA ========== */}
       <aside className="sidebar-right">
         <div className="sidebar-card">
           <h4>📊 Le tue stats</h4>
-
           {!user ? (
             <div style={{ textAlign: 'center' }}>
               <p className="text-muted" style={{ fontSize: '0.85rem' }}>
@@ -681,7 +763,6 @@ export default function Home() {
             </div>
           )}
         </div>
-
         <div className="sidebar-card" style={{ marginTop: '12px', textAlign: 'center' }}>
           <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
             🌱 PiantaSocial • {new Date().getFullYear()}

@@ -12,11 +12,9 @@ export default function Comments({ postId }) {
   const [replyTo, setReplyTo] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // EDIT COMMENT
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editCommentContent, setEditCommentContent] = useState('')
 
-  // ----- CARICA COMMENTI -----
   useEffect(() => {
     fetchComments()
   }, [postId])
@@ -62,7 +60,6 @@ export default function Comments({ postId }) {
     }
   }
 
-  // ----- INVIA COMMENTO -----
   async function handleSubmitComment(e) {
     e.preventDefault()
     if (!user) {
@@ -70,6 +67,9 @@ export default function Comments({ postId }) {
       return
     }
     if (!newComment.trim()) return
+
+    // ✅ CONFERMA
+    if (!confirm('💬 Sei sicuro di voler pubblicare questo commento?')) return
 
     setIsSubmitting(true)
     try {
@@ -95,9 +95,11 @@ export default function Comments({ postId }) {
     }
   }
 
-  // ----- EDIT COMMENT -----
   async function handleEditComment(commentId) {
     if (!editCommentContent.trim()) return
+
+    // ✅ CONFERMA
+    if (!confirm('✏️ Sei sicuro di voler modificare questo commento?')) return
 
     try {
       const { error } = await supabase
@@ -116,7 +118,6 @@ export default function Comments({ postId }) {
     }
   }
 
-  // ----- RENDER -----
   function CommentItem({ comment, depth = 0 }) {
     const [showReplyForm, setShowReplyForm] = useState(false)
     const isOwnComment = user?.id === comment.user_id
@@ -141,12 +142,22 @@ export default function Comments({ postId }) {
           ) : (
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />
           )}
-          <strong style={{ fontSize: '0.9rem' }}>
-            {comment.profiles?.display_name || comment.profiles?.username || 'Anonimo'}
-          </strong>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-            @{comment.profiles?.username}
-          </span>
+          <Link
+            to={`/profile/${comment.profiles?.username}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <strong style={{ fontSize: '0.9rem' }}>
+              {comment.profiles?.display_name || comment.profiles?.username || 'Anonimo'}
+            </strong>
+          </Link>
+          <Link
+            to={`/profile/${comment.profiles?.username}`}
+            style={{ textDecoration: 'none', color: 'var(--color-text-muted)' }}
+          >
+            <span style={{ fontSize: '0.75rem' }}>
+              @{comment.profiles?.username}
+            </span>
+          </Link>
           {isOwnComment && (
             <span style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', padding: '0 6px', borderRadius: '4px' }}>
               tu
@@ -157,7 +168,6 @@ export default function Comments({ postId }) {
           </span>
         </div>
 
-        {/* Contenuto o edit */}
         {isEditing ? (
           <div style={{ marginLeft: '36px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
             <input
@@ -188,7 +198,6 @@ export default function Comments({ postId }) {
           </p>
         )}
 
-        {/* Bottoni azioni */}
         <div style={{ marginLeft: '36px', display: 'flex', gap: '12px', fontSize: '0.8rem', marginTop: '2px' }}>
           {!isEditing && (
             <button
@@ -227,12 +236,12 @@ export default function Comments({ postId }) {
           )}
         </div>
 
-        {/* Form rispondi */}
         {showReplyForm && user && (
           <ReplyForm
             parentComment={comment}
             onCancel={() => setShowReplyForm(false)}
             onReply={async (content) => {
+              if (!confirm('💬 Sei sicuro di voler rispondere a questo commento?')) return
               try {
                 await supabase
                   .from('comments')
@@ -252,7 +261,6 @@ export default function Comments({ postId }) {
           />
         )}
 
-        {/* Sotto-commenti */}
         {comment.replies && comment.replies.length > 0 && (
           <div>
             {comment.replies.map((reply) => (
@@ -264,7 +272,6 @@ export default function Comments({ postId }) {
     )
   }
 
-  // ----- FORM RISPOSTA -----
   function ReplyForm({ parentComment, onCancel, onReply }) {
     const [content, setContent] = useState('')
     const [isSending, setIsSending] = useState(false)
@@ -318,7 +325,6 @@ export default function Comments({ postId }) {
     )
   }
 
-  // ----- RENDER PRINCIPALE -----
   if (loading) return <div style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>⏳ Caricamento commenti...</div>
 
   return (

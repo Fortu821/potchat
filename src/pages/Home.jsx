@@ -24,6 +24,10 @@ export default function Home() {
   const [mediaUrl, setMediaUrl] = useState(null)
   const [mediaType, setMediaType] = useState(null)
 
+  // EDIT POST
+  const [editingPostId, setEditingPostId] = useState(null)
+  const [editPostContent, setEditPostContent] = useState('')
+
   // STATS
   const [stats, setStats] = useState({
     totalPosts: 0,
@@ -158,7 +162,7 @@ export default function Home() {
     await fetchPosts(filter)
   }
 
-  // ----- CREA POST (CON MEDIA) -----
+  // ----- CREA POST -----
   async function handleCreatePost(e) {
     e.preventDefault()
     if (!user) {
@@ -176,10 +180,11 @@ export default function Home() {
         .from('posts')
         .insert({
           user_id: user.id,
-          content: newPostContent.trim() || '',
+          content: newPostContent.trim() || null,
           media_url: mediaUrl || null,
           media_type: mediaType || null
         })
+
       if (error) throw error
 
       setNewPostContent('')
@@ -191,6 +196,27 @@ export default function Home() {
       alert('Errore nella pubblicazione del post')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // ----- EDIT POST -----
+  async function handleEditPost(postId) {
+    if (!editPostContent.trim()) return
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ content: editPostContent.trim() })
+        .eq('id', postId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      setEditingPostId(null)
+      setEditPostContent('')
+      await refreshPosts()
+    } catch (err) {
+      console.error('❌ Errore modifica:', err)
+      alert('Errore nella modifica del post')
     }
   }
 
@@ -294,6 +320,11 @@ export default function Home() {
             <span className="nav-label">Home</span>
           </NavLink>
 
+          <NavLink to="/search" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <span className="nav-icon">🔍</span>
+            <span className="nav-label">Cerca</span>
+          </NavLink>
+
           <NavLink to="/notifications" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">🔔</span>
             <span className="nav-label">Notifiche</span>
@@ -303,13 +334,6 @@ export default function Home() {
             <span className="nav-icon">💬</span>
             <span className="nav-label">Messaggi</span>
           </NavLink>
-
-          {user?.role === 'moderator' || user?.role === 'admin' ? (
-            <NavLink to="/moderation" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <span className="nav-icon">🚩</span>
-              <span className="nav-label">Moderazione</span>
-            </NavLink>
-          ) : null}
 
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
@@ -340,6 +364,9 @@ export default function Home() {
       <main className="feed-main">
         <div className="feed-header">
           <h2>📰 Feed</h2>
+          <Link to="/search" className="btn btn-outline btn-sm">
+            🔍 Cerca
+          </Link>
         </div>
 
         {/* FILTRI */}
@@ -384,7 +411,6 @@ export default function Home() {
                   className="textarea"
                 />
 
-                {/* MEDIA UPLOAD */}
                 <MediaUpload
                   onUpload={(url, type) => {
                     setMediaUrl(url)
@@ -450,7 +476,6 @@ export default function Home() {
             const isReposted = post.is_reposted_by_user || false
             const isCommenting = commentingPostId === post.id
 
-            // Determina il tipo di media (se non specificato, controlla l'estensione)
             let mediaType = post.media_type
             if (post.media_url && !mediaType) {
               if (post.media_url.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
@@ -459,6 +484,8 @@ export default function Home() {
                 mediaType = 'image'
               }
             }
+
+            const isOwnPost = user && user.id === post.user_id
 
             return (
               <div key={post.id} className="card">
@@ -484,7 +511,6 @@ export default function Home() {
 
                 <div className="card-content">{post.content}</div>
 
-                {/* MEDIA (IMMAGINE O VIDEO) */}
                 {post.media_url && (
                   <div className="post-media" style={{ marginTop: '8px' }}>
                     {mediaType === 'video' ? (
@@ -516,6 +542,46 @@ export default function Home() {
                           e.target.style.display = 'none'
                         }}
                       />
+                    )}
+                  </div>
+                )}
+
+                {/* EDIT POST (solo proprietario) */}
+                {isOwnPost && (
+                  <div style={{ marginTop: '4px' }}>
+                    {editingPostId === post.id ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                        <textarea
+                          value={editPostContent}
+                          onChange={(e) => setEditPostContent(e.target.value)}
+                          className="textarea"
+                          style={{ flex: 1, minHeight: '60px' }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleEditPost(post.id)}
+                          className="btn btn-success btn-sm"
+                          disabled={!editPostContent.trim()}
+                        >
+                          💾 Salva
+                        </button>
+                        <button
+                          onClick={() => setEditingPostId(null)}
+                          className="btn btn-outline btn-sm"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditingPostId(post.id)
+                          setEditPostContent(post.content || '')
+                        }}
+                        className="post-action"
+                      >
+                        ✏️ Modifica
+                      </button>
                     )}
                   </div>
                 )}

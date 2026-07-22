@@ -18,7 +18,6 @@ export default function Profile() {
   const [followingCount, setFollowingCount] = useState(0)
   const [isOwnProfile, setIsOwnProfile] = useState(false)
 
-  // EDIT
   const [isEditing, setIsEditing] = useState(false)
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editBio, setEditBio] = useState('')
@@ -97,7 +96,7 @@ export default function Profile() {
     if (username) fetchProfile()
   }, [username, user])
 
-  // ----- SEGUI / SMETTI DI SEGUIRE -----
+  // ----- SEGUI -----
   async function handleFollow() {
     if (!user) {
       alert('Devi essere loggato per seguire')
@@ -196,7 +195,6 @@ export default function Profile() {
 
   return (
     <div className="app-container">
-      {/* HEADER PROFILO */}
       <div className="profile-header">
         {profile.avatar_url ? (
           <img src={profile.avatar_url} alt={profile.username} className="avatar-large" />
@@ -213,7 +211,6 @@ export default function Profile() {
           Iscritto il {new Date(profile.created_at).toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
 
-        {/* STATS */}
         <div className="profile-stats">
           <div className="profile-stats-item">
             <span className="number">{posts.length}</span>
@@ -229,7 +226,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* AZIONI */}
         <div className="profile-actions">
           {isOwnProfile ? (
             <button
@@ -261,7 +257,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* MODIFICA PROFILO */}
       {isEditing && isOwnProfile && (
         <form onSubmit={handleSaveProfile} className="card" style={{ marginBottom: '24px' }}>
           <h3 style={{ marginTop: 0 }}>✏️ Modifica profilo</h3>
@@ -319,7 +314,6 @@ export default function Profile() {
         </form>
       )}
 
-      {/* POST DELL'UTENTE */}
       <h3 style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '8px', marginBottom: '16px' }}>
         📝 Post di {profile.display_name || profile.username}
       </h3>
@@ -331,21 +325,65 @@ export default function Profile() {
           </p>
         </div>
       ) : (
-        posts.map((post) => (
-          <div key={post.id} className="card">
-            <p style={{ margin: '0 0 8px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {post.content}
-            </p>
-            <div style={{ display: 'flex', gap: '15px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-              <span>❤️ {post.likes_count || 0}</span>
-              <span>💬 {post.comments_count || 0}</span>
-              <span>🔄 {post.reposts_count || 0}</span>
-              <span style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>
-                {new Date(post.created_at).toLocaleString('it-IT', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
-              </span>
+        posts.map((post) => {
+          let mediaType = post.media_type
+          if (post.media_url && !mediaType) {
+            if (post.media_url.match(/\.(mp4|webm|mov|avi|mkv)$/i)) {
+              mediaType = 'video'
+            } else {
+              mediaType = 'image'
+            }
+          }
+
+          return (
+            <div key={post.id} className="card">
+              <p style={{ margin: '0 0 8px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {post.content}
+              </p>
+
+              {post.media_url && (
+                <div className="post-media" style={{ marginTop: '8px' }}>
+                  {mediaType === 'video' ? (
+                    <video
+                      src={post.media_url}
+                      controls
+                      style={{
+                        width: '100%',
+                        maxHeight: '400px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: '#000'
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={post.media_url}
+                      alt="Contenuto del post"
+                      style={{
+                        width: '100%',
+                        maxHeight: '400px',
+                        objectFit: 'cover',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '15px', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '8px' }}>
+                <span>❤️ {post.likes_count || 0}</span>
+                <span>💬 {post.comments_count || 0}</span>
+                <span>🔄 {post.reposts_count || 0}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>
+                  {new Date(post.created_at).toLocaleString('it-IT', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+                </span>
+              </div>
             </div>
-          </div>
-        ))
+          )
+        })
       )}
 
       <div style={{ textAlign: 'center', marginTop: '20px' }}>

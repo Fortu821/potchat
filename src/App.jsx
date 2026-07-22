@@ -8,7 +8,9 @@ import Profile from './pages/Profile'
 import NotificationsPage from './pages/NotificationsPage'
 import Chats from './pages/Chats'
 import Chat from './pages/Chat'
-import Moderation from './pages/Moderation'
+import Search from './pages/Search'
+import ResetPassword from './pages/ResetPassword'
+// import Moderation from './pages/Moderation'  // COMMENTATO PER ORA
 
 function App() {
   return (
@@ -22,7 +24,9 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:conversationId" element={<Chat />} />
-          <Route path="/moderation" element={<Moderation />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          {/* <Route path="/moderation" element={<Moderation />} /> */}
         </Routes>
       </AuthProvider>
     </BrowserRouter>

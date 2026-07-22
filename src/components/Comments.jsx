@@ -1,67 +1,68 @@
 // src/components/Comments.jsx
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Link } from 'react-router-dom'
 
 export default function Comments({ postId }) {
   const { user } = useAuth()
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
-  const [replyTo, setReplyTo] = useState(null) // { id, username }
+  const [replyTo, setReplyTo] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // ----- CARICA I COMMENTI (inclusi quelli già scritti) -----
+  // EDIT COMMENT
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editCommentContent, setEditCommentContent] = useState('')
+
+  // ----- CARICA COMMENTI -----
   useEffect(() => {
     fetchComments()
   }, [postId])
 
-async function fetchComments() {
-  setLoading(true)
-  try {
-    // Usa la vista appena creata
-    const { data, error } = await supabase
-      .from('comments_with_profiles')
-      .select('*')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true })
+  async function fetchComments() {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true })
 
-    if (error) throw error
-    console.log('📝 Commenti caricati (vista):', data) // Per debug
+      if (error) throw error
 
-    // Ora devi ricostruire l'albero come prima, ma i dati hanno già i campi del profilo
-    // Quindi adatta la struttura: i campi username, display_name, avatar_url sono già nella riga
-    const commentMap = {}
-    const rootComments = []
+      const commentMap = {}
+      const rootComments = []
 
-    data.forEach(comment => {
-      // Aggiungi un oggetto 'profiles' fittizio per mantenere compatibilità con il render
-      comment.profiles = {
-        username: comment.username,
-        display_name: comment.display_name,
-        avatar_url: comment.avatar_url
-      }
-      commentMap[comment.id] = { ...comment, replies: [] }
-    })
+      data.forEach(comment => {
+        commentMap[comment.id] = { ...comment, replies: [] }
+      })
 
-    data.forEach(comment => {
-      if (comment.parent_id && commentMap[comment.parent_id]) {
-        commentMap[comment.parent_id].replies.push(commentMap[comment.id])
-      } else {
-        rootComments.push(commentMap[comment.id])
-      }
-    })
+      data.forEach(comment => {
+        if (comment.parent_id && commentMap[comment.parent_id]) {
+          commentMap[comment.parent_id].replies.push(commentMap[comment.id])
+        } else {
+          rootComments.push(commentMap[comment.id])
+        }
+      })
 
-    setComments(rootComments)
-  } catch (err) {
-    console.error('❌ Errore nel caricamento commenti:', err)
-  } finally {
-    setLoading(false)
+      setComments(rootComments)
+    } catch (err) {
+      console.error('❌ Errore nel caricamento commenti:', err)
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
-  // ----- INVIA NUOVO COMMENTO (alla radice) -----
+  // ----- INVIA COMMENTO -----
   async function handleSubmitComment(e) {
     e.preventDefault()
     if (!user) {
@@ -94,21 +95,42 @@ async function fetchComments() {
     }
   }
 
-  // ----- COMPONENTE PER UN SINGOLO COMMENTO (ricorsivo) -----
+  // ----- EDIT COMMENT -----
+  async function handleEditComment(commentId) {
+    if (!editCommentContent.trim()) return
+
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .update({ content: editCommentContent.trim() })
+        .eq('id', commentId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      setEditingCommentId(null)
+      setEditCommentContent('')
+      await fetchComments()
+    } catch (err) {
+      console.error('❌ Errore modifica commento:', err)
+      alert('Errore nella modifica del commento')
+    }
+  }
+
+  // ----- RENDER -----
   function CommentItem({ comment, depth = 0 }) {
     const [showReplyForm, setShowReplyForm] = useState(false)
     const isOwnComment = user?.id === comment.user_id
+    const isEditing = editingCommentId === comment.id
 
     return (
       <div
         style={{
           marginLeft: depth > 0 ? '24px' : '0',
           padding: '8px 0 8px 12px',
-          borderLeft: depth > 0 ? '2px solid #ddd' : 'none',
+          borderLeft: depth > 0 ? '2px solid var(--color-border)' : 'none',
           marginTop: '4px'
         }}
       >
-        {/* Intestazione */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
           {comment.profiles?.avatar_url ? (
             <img
@@ -117,48 +139,95 @@ async function fetchComments() {
               style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
             />
           ) : (
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#ccc' }} />
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />
           )}
           <strong style={{ fontSize: '0.9rem' }}>
             {comment.profiles?.display_name || comment.profiles?.username || 'Anonimo'}
           </strong>
-          <span style={{ fontSize: '0.75rem', color: '#888' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
             @{comment.profiles?.username}
           </span>
           {isOwnComment && (
-            <span style={{ fontSize: '0.7rem', backgroundColor: '#e8f5e9', padding: '0 6px', borderRadius: '4px' }}>
+            <span style={{ fontSize: '0.7rem', backgroundColor: 'var(--color-primary-bg)', padding: '0 6px', borderRadius: '4px' }}>
               tu
             </span>
           )}
-          <span style={{ fontSize: '0.7rem', color: '#aaa', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
             {new Date(comment.created_at).toLocaleString('it-IT', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
           </span>
         </div>
 
-        {/* Contenuto */}
-        <p style={{ margin: '2px 0 4px 36px', fontSize: '0.95rem', wordBreak: 'break-word' }}>
-          {comment.content}
-        </p>
+        {/* Contenuto o edit */}
+        {isEditing ? (
+          <div style={{ marginLeft: '36px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+            <input
+              type="text"
+              value={editCommentContent}
+              onChange={(e) => setEditCommentContent(e.target.value)}
+              className="input"
+              style={{ flex: 1 }}
+              autoFocus
+            />
+            <button
+              onClick={() => handleEditComment(comment.id)}
+              className="btn btn-success btn-sm"
+              disabled={!editCommentContent.trim()}
+            >
+              💾
+            </button>
+            <button
+              onClick={() => setEditingCommentId(null)}
+              className="btn btn-outline btn-sm"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <p style={{ margin: '2px 0 4px 36px', fontSize: '0.95rem', wordBreak: 'break-word' }}>
+            {comment.content}
+          </p>
+        )}
 
-        {/* Pulsante Rispondi */}
-        <div style={{ marginLeft: '36px', display: 'flex', gap: '12px', fontSize: '0.8rem' }}>
-          <button
-            onClick={() => setShowReplyForm(!showReplyForm)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#666',
-              cursor: user ? 'pointer' : 'default',
-              padding: '2px 8px',
-              fontSize: '0.8rem'
-            }}
-            title={user ? 'Rispondi' : 'Devi essere loggato per rispondere'}
-          >
-            ↩️ Rispondi
-          </button>
+        {/* Bottoni azioni */}
+        <div style={{ marginLeft: '36px', display: 'flex', gap: '12px', fontSize: '0.8rem', marginTop: '2px' }}>
+          {!isEditing && (
+            <button
+              onClick={() => setShowReplyForm(!showReplyForm)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-text-muted)',
+                cursor: user ? 'pointer' : 'default',
+                padding: '2px 8px',
+                fontSize: '0.8rem'
+              }}
+              title={user ? 'Rispondi' : 'Devi essere loggato per rispondere'}
+            >
+              ↩️ Rispondi
+            </button>
+          )}
+
+          {!isEditing && isOwnComment && (
+            <button
+              onClick={() => {
+                setEditingCommentId(comment.id)
+                setEditCommentContent(comment.content || '')
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                padding: '2px 8px',
+                fontSize: '0.8rem'
+              }}
+            >
+              ✏️ Modifica
+            </button>
+          )}
         </div>
 
-        {/* Form per rispondere a questo commento */}
+        {/* Form rispondi */}
         {showReplyForm && user && (
           <ReplyForm
             parentComment={comment}
@@ -183,7 +252,7 @@ async function fetchComments() {
           />
         )}
 
-        {/* Sotto-commenti (ricorsione) */}
+        {/* Sotto-commenti */}
         {comment.replies && comment.replies.length > 0 && (
           <div>
             {comment.replies.map((reply) => (
@@ -195,7 +264,7 @@ async function fetchComments() {
     )
   }
 
-  // ----- FORM PER RISPONDERE (inline) -----
+  // ----- FORM RISPOSTA -----
   function ReplyForm({ parentComment, onCancel, onReply }) {
     const [content, setContent] = useState('')
     const [isSending, setIsSending] = useState(false)
@@ -219,7 +288,7 @@ async function fetchComments() {
           alignItems: 'flex-start'
         }}
       >
-        <span style={{ fontSize: '0.85rem', color: '#555', paddingTop: '4px' }}>
+        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', paddingTop: '4px' }}>
           @{parentComment.profiles?.username}:
         </span>
         <input
@@ -227,44 +296,21 @@ async function fetchComments() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Rispondi..."
-          style={{
-            flex: 1,
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: '1px solid #ddd',
-            fontSize: '0.9rem',
-            fontFamily: 'inherit'
-          }}
+          className="input"
+          style={{ flex: 1, padding: '6px 10px', fontSize: '0.9rem' }}
           autoFocus
         />
         <button
           type="submit"
           disabled={isSending || !content.trim()}
-          style={{
-            padding: '6px 14px',
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            opacity: (isSending || !content.trim()) ? 0.6 : 1
-          }}
+          className="btn btn-primary btn-sm"
         >
           {isSending ? '...' : 'Invia'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          style={{
-            padding: '6px 10px',
-            background: 'none',
-            border: '1px solid #ccc',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            color: '#666'
-          }}
+          className="btn btn-outline btn-sm"
         >
           Annulla
         </button>
@@ -273,40 +319,25 @@ async function fetchComments() {
   }
 
   // ----- RENDER PRINCIPALE -----
-  if (loading) return <div style={{ padding: '8px', fontSize: '0.9rem', color: '#888' }}>⏳ Caricamento commenti...</div>
+  if (loading) return <div style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>⏳ Caricamento commenti...</div>
 
   return (
     <div style={{ marginTop: '8px' }}>
-      {/* Form per nuovo commento in cima */}
       <form onSubmit={handleSubmitComment} style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
         <input
           type="text"
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={replyTo ? `Rispondi a @${replyTo.username}...` : 'Scrivi un commento...'}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: '1px solid #ddd',
-            fontSize: '0.95rem',
-            fontFamily: 'inherit'
-          }}
+          className="input"
+          style={{ flex: 1, padding: '8px 12px', fontSize: '0.95rem' }}
           disabled={!user}
         />
         <button
           type="submit"
           disabled={!user || isSubmitting || !newComment.trim()}
-          style={{
-            padding: '8px 20px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: user ? 'pointer' : 'default',
-            fontSize: '0.95rem',
-            opacity: (!user || isSubmitting || !newComment.trim()) ? 0.6 : 1
-          }}
+          className="btn btn-primary"
+          style={{ opacity: (!user || isSubmitting || !newComment.trim()) ? 0.6 : 1 }}
         >
           {isSubmitting ? '⏳' : 'Invia'}
         </button>
@@ -314,31 +345,22 @@ async function fetchComments() {
           <button
             type="button"
             onClick={() => setReplyTo(null)}
-            style={{
-              padding: '8px 12px',
-              background: 'none',
-              border: '1px solid #ccc',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              color: '#666'
-            }}
+            className="btn btn-outline"
+            style={{ padding: '8px 12px' }}
           >
             ✕
           </button>
         )}
       </form>
 
-      {/* Messaggio per non loggati */}
       {!user && (
-        <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '8px' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
           <Link to="/login">Accedi</Link> o <Link to="/signup">registrati</Link> per commentare.
         </p>
       )}
 
-      {/* LISTA COMMENTI ESISTENTI */}
       {comments.length === 0 ? (
-        <p style={{ fontSize: '0.9rem', color: '#aaa', margin: '4px 0' }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', margin: '4px 0' }}>
           Nessun commento. Sii il primo!
         </p>
       ) : (

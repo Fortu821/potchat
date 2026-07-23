@@ -53,9 +53,57 @@ export default function NotificationsPage() {
   }, [user])
 
   if (loading) {
-    return <div className="app-container text-center" style={{ paddingTop: '60px' }}>
-      <div className="text-muted loading-pulse">⏳ Caricamento notifiche...</div>
-    </div>
+    return (
+      <div className="app-container text-center" style={{ paddingTop: '60px' }}>
+        <div className="text-muted loading-pulse">⏳ Caricamento notifiche...</div>
+      </div>
+    )
+  }
+
+  // Formatta il messaggio in base al tipo
+  function getNotificationMessage(notification) {
+    const actor = notification.actor
+    const actorName = actor?.display_name || actor?.username || 'Qualcuno'
+
+    switch (notification.type) {
+      case 'like':
+        return `${actorName} ha messo like al tuo post`
+      case 'comment':
+        return `${actorName} ha commentato il tuo post`
+      case 'repost':
+        return `${actorName} ha repostato il tuo post`
+      case 'follow':
+        return `${actorName} ti ha seguito`
+      case 'message':
+        return `${actorName} ti ha inviato un messaggio`
+      case 'report':
+        return `${actorName} ha segnalato un contenuto`
+      case 'achievement':
+        return `${actorName} 🏆 ha sbloccato un nuovo trofeo!`
+      default:
+        return `${actorName} ha interagito con te`
+    }
+  }
+
+  function getNotificationLink(notification) {
+    const actor = notification.actor
+
+    switch (notification.type) {
+      case 'like':
+      case 'comment':
+      case 'repost':
+        return notification.post_id ? `/post/${notification.post_id}` : '#'
+      case 'follow':
+        return `/profile/${actor?.username}`
+      case 'message':
+        return notification.target_id ? `/chat/${notification.target_id}` : '/chats'
+      case 'achievement':
+        return `/profile/${actor?.username}`
+      case 'report':
+        return '#'
+      default:
+        return '#'
+    }
   }
 
   return (
@@ -75,54 +123,72 @@ export default function NotificationsPage() {
         notifications.map((n) => {
           const actor = n.actor
           const actorName = actor?.display_name || actor?.username || 'Qualcuno'
-
-          let message = ''
-          switch (n.type) {
-            case 'like': message = 'ha messo like al tuo post'; break
-            case 'comment': message = 'ha commentato il tuo post'; break
-            case 'repost': message = 'ha repostato il tuo post'; break
-            case 'follow': message = 'ti ha seguito'; break
-            default: message = 'ha interagito con te'
-          }
+          const isAchievement = n.type === 'achievement'
+          const link = getNotificationLink(n)
+          const message = getNotificationMessage(n)
 
           return (
-            <div
+            <Link
               key={n.id}
-              className={`notification-item ${!n.read ? 'unread' : ''}`}
+              to={link}
               style={{
+                display: 'block',
                 padding: '12px 16px',
                 borderBottom: '1px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                backgroundColor: n.read ? 'transparent' : 'var(--color-primary-bg)'
+                backgroundColor: n.read ? 'transparent' : 'var(--color-primary-bg)',
+                textDecoration: 'none',
+                color: 'inherit',
+                transition: 'background 0.1s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = n.read ? 'transparent' : 'var(--color-primary-bg)'
               }}
             >
-              {actor?.avatar_url ? (
-                <img
-                  src={actor.avatar_url}
-                  alt={actorName}
-                  style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              ) : (
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />
-              )}
-              <div>
-                <Link to={`/profile/${actor?.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <strong>{actorName}</strong>
-                </Link>
-                <span style={{ marginLeft: '4px' }}>{message}</span>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                  {new Date(n.created_at).toLocaleString('it-IT', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isAchievement ? (
+                  <span style={{ fontSize: '1.8rem' }}>🏆</span>
+                ) : actor?.avatar_url ? (
+                  <img
+                    src={actor.avatar_url}
+                    alt={actorName}
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                    🌱
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div>
+                    {isAchievement ? (
+                      <>
+                        <strong>{actorName}</strong>
+                        <span style={{ marginLeft: '4px' }}>🏆 ha sbloccato un nuovo trofeo!</span>
+                      </>
+                    ) : (
+                      <span>{message}</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                    {new Date(n.created_at).toLocaleString('it-IT', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                    {!n.read && (
+                      <span style={{ marginLeft: '8px', color: 'var(--color-secondary)', fontSize: '0.7rem' }}>
+                        ● Nuovo
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
           )
         })
       )}

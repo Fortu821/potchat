@@ -9,6 +9,7 @@ import ReportButton from '../components/ReportButton'
 import MediaUpload from '../components/MediaUpload'
 import { parseText } from '../utils/textParser'
 import Logo from '../components/Logo'
+import { checkAchievements } from '../utils/achievementHelper'
 
 export default function Home() {
   const { user, signOut } = useAuth()
@@ -40,7 +41,6 @@ export default function Home() {
   })
   const [statsLoading, setStatsLoading] = useState(true)
 
-  // ----- BADGE MESSAGGI NON LETTI -----
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
   const observerRef = useRef()
@@ -354,6 +354,10 @@ export default function Home() {
       setMediaUrl(null)
       setMediaType(null)
       await refreshPosts()
+
+      // 👇 CONTROLLA ACHIEVEMENTS
+      await checkAchievements(user.id)
+
     } catch (err) {
       console.error('❌ Errore nella pubblicazione:', err)
       alert('Errore nella pubblicazione del post')
@@ -414,6 +418,10 @@ export default function Home() {
       }
 
       await refreshPosts()
+
+      // 👇 CONTROLLA ACHIEVEMENTS
+      await checkAchievements(user.id)
+
     } catch (err) {
       console.error('❌ Errore like:', err)
     }
@@ -448,6 +456,10 @@ export default function Home() {
       }
 
       await refreshPosts()
+
+      // 👇 CONTROLLA ACHIEVEMENTS
+      await checkAchievements(user.id)
+
     } catch (err) {
       console.error('❌ Errore repost:', err)
     }

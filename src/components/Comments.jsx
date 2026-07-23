@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { parseText } from '../utils/textParser'
+import { checkAchievements } from '../utils/achievementHelper'
 
 export default function Comments({ postId }) {
   const { user } = useAuth()
@@ -99,6 +100,9 @@ export default function Comments({ postId }) {
       setNewComment('')
       setReplyTo(null)
       await fetchComments()
+
+      // 👇 CONTROLLA ACHIEVEMENTS
+      await checkAchievements(user.id)
 
     } catch (err) {
       console.error('❌ Errore nell\'invio commento:', err)
@@ -269,6 +273,8 @@ export default function Comments({ postId }) {
                   })
                 await fetchComments()
                 setShowReplyForm(false)
+                // 👇 CONTROLLA ACHIEVEMENTS
+                await checkAchievements(user.id)
               } catch (err) {
                 console.error('❌ Errore risposta:', err)
                 alert('Errore nell\'invio della risposta')

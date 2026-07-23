@@ -174,10 +174,17 @@ export default function Notifications() {
         message = `ti ha inviato un messaggio`
         link = notification.target_id ? `/chat/${notification.target_id}` : '#'
         break
+      case 'achievement':
+        message = `🏆 ha sbloccato ${notification.achievement_name || 'un trofeo'}!`
+        link = `/profile/${actor?.username}`
+        break
       default:
         message = `ha interagito con te`
         link = '#'
     }
+
+    // Per le notifiche di achievement, il contenuto è diverso
+    const isAchievement = notification.type === 'achievement'
 
     return (
       <Link
@@ -201,7 +208,9 @@ export default function Notifications() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {actor?.avatar_url ? (
+          {isAchievement ? (
+            <span style={{ fontSize: '1.5rem' }}>🏆</span>
+          ) : actor?.avatar_url ? (
             <img
               src={actor.avatar_url}
               alt={actorName}
@@ -212,8 +221,17 @@ export default function Notifications() {
           )}
           <div style={{ flex: 1 }}>
             <div>
-              <strong>{actorName}</strong>
-              <span style={{ marginLeft: '4px' }}>{message}</span>
+              {isAchievement ? (
+                <span>
+                  <strong>{actorName}</strong>
+                  <span style={{ marginLeft: '4px' }}>{message}</span>
+                </span>
+              ) : (
+                <>
+                  <strong>{actorName}</strong>
+                  <span style={{ marginLeft: '4px' }}>{message}</span>
+                </>
+              )}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#888' }}>
               {time}

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { parseText } from '../utils/textParser'
 import ReportButton from '../components/ReportButton'
+import Achievements from '../components/Achievements'
 
 export default function Profile() {
   const { username } = useParams()
@@ -355,7 +356,6 @@ export default function Profile() {
 
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
 
-        {/* 🌱 CAMPI BOTANICI */}
         {profile.common_name && (
           <p style={{ margin: '4px 0', fontSize: '0.95rem' }}>
             🌿 <strong>Nome comune:</strong> {profile.common_name}
@@ -417,7 +417,6 @@ export default function Profile() {
               >
                 💬 Messaggio
               </button>
-              {/* 🚩 SEGNALA PROFILO */}
               {user && !isOwnProfile && (
                 <ReportButton 
                   targetType="profile" 
@@ -535,6 +534,11 @@ export default function Profile() {
           </div>
         </form>
       )}
+
+      {/* 🏆 TROFEI */}
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <Achievements userId={profile.id} />
+      </div>
 
       <h3 style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '8px', marginBottom: '16px' }}>
         📝 Post di {profile.display_name || profile.username}

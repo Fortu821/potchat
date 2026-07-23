@@ -29,8 +29,8 @@ export default function Signup() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '0 20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <Logo variant="full" style={{ height: '48px' }} />
+      <div className="auth-logo" style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <Logo variant="full" />
       </div>
 
       <h2 style={{ textAlign: 'center' }}>🌱 Registrati</h2>

@@ -16,34 +16,13 @@ export default function Comments({ postId }) {
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editCommentContent, setEditCommentContent] = useState('')
 
-  // ----- SFISSA IL POST PER L'UTENTE CORRENTE (se è fissato) -----
-  async function unpinPostForCurrentUser() {
-    if (!postId || !user) return
-
-    try {
-      // Controlla se il post è fissato globalmente
-      const { data, error } = await supabase
-        .from('posts')
-        .select('pinned')
-        .eq('id', postId)
-        .single()
-
-      if (error || !data?.pinned) return
-
-      // Se è fissato, registra che questo utente ha commentato su questo post
-      // Così per lui non sarà più fissato
-      const { error: rpcError } = await supabase
-        .rpc('unpin_for_user', {
-          post_id: postId,
-          user_id: user.id
-        })
-
-      if (rpcError) throw rpcError
-
-      console.log('📌 Post sfissato per l\'utente corrente.')
-    } catch (err) {
-      console.error('❌ Errore durante lo sfissaggio:', err)
+  // ----- CHECK BLOCKED -----
+  function checkBlocked() {
+    if (user?.blocked) {
+      alert('🚫 Intruso Rilevato! Diventa anche tu una pianta 🌱')
+      return true
     }
+    return false
   }
 
   // ----- CARICA COMMENTI -----
@@ -99,6 +78,7 @@ export default function Comments({ postId }) {
       alert('Devi essere loggato per commentare')
       return
     }
+    if (checkBlocked()) return
     if (!newComment.trim()) return
 
     if (!confirm('💬 Sei sicuro di voler pubblicare questo commento?')) return
@@ -119,9 +99,6 @@ export default function Comments({ postId }) {
       setNewComment('')
       setReplyTo(null)
       await fetchComments()
-
-      // 👇 SFISSA IL POST PER L'UTENTE CORRENTE (se era fissato)
-      await unpinPostForCurrentUser()
 
     } catch (err) {
       console.error('❌ Errore nell\'invio commento:', err)
@@ -279,6 +256,7 @@ export default function Comments({ postId }) {
             parentComment={comment}
             onCancel={() => setShowReplyForm(false)}
             onReply={async (content) => {
+              if (checkBlocked()) return
               if (!confirm('💬 Sei sicuro di voler rispondere a questo commento?')) return
               try {
                 await supabase
@@ -291,10 +269,6 @@ export default function Comments({ postId }) {
                   })
                 await fetchComments()
                 setShowReplyForm(false)
-
-                // 👇 SFISSA IL POST PER L'UTENTE CORRENTE (se era fissato)
-                await unpinPostForCurrentUser()
-
               } catch (err) {
                 console.error('❌ Errore risposta:', err)
                 alert('Errore nell\'invio della risposta')

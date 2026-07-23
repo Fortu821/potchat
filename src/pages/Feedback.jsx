@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import Logo from '../components/Logo'
 
 export default function Feedback() {
   const { user } = useAuth()
@@ -20,7 +21,6 @@ export default function Feedback() {
     setError(null)
 
     try {
-      // Invia via email (puoi usare un webhook o Supabase)
       const { error: supabaseError } = await supabase
         .from('feedback')
         .insert({
@@ -31,9 +31,6 @@ export default function Feedback() {
         })
 
       if (supabaseError) throw supabaseError
-
-      // Invia anche una mail (opzionale, via Edge Function o webhook)
-      // Per ora salviamo solo nel DB
 
       setSubmitted(true)
       setMessage('')
@@ -48,7 +45,7 @@ export default function Feedback() {
   if (submitted) {
     return (
       <div className="app-container" style={{ maxWidth: '500px', margin: '40px auto', textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🌱</div>
+        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📣</div>
         <h2>Grazie per il tuo feedback! 💚</h2>
         <p style={{ color: 'var(--color-text-muted)' }}>
           Il tuo messaggio ci aiuterà a migliorare PotChat.

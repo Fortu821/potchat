@@ -61,7 +61,7 @@ export default function WelcomeModal({ onClose }) {
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <Logo variant="full" style={{ height: '48px', margin: '0 auto' }} />
+          <Logo variant="full" style={{ margin: '0 auto' }} />
           <p style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem', marginTop: '8px' }}>
             Il social network dove <strong>sei una pianta</strong>.
           </p>
@@ -111,7 +111,7 @@ export default function WelcomeModal({ onClose }) {
             }}
             onClick={handleClose}
           >
-            💬 Invia feedback
+            📣 Invia feedback
           </Link>
         </div>
 

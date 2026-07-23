@@ -1604,18 +1604,58 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .logo-image {
-  height: 32px;
+  height: 50px;
   width: auto;
   display: block;
 }
 
 .sidebar-logo .logo-image {
-  height: 36px;
+  height: 50px;
 }
 
 /* Su mobile, riduci un po' il logo */
 @media (max-width: 768px) {
   .sidebar-logo .logo-image {
-    height: 28px;
+    height: 50px;
+  }
+}
+
+/* src/index.css - Sezione LOGO ingrandita */
+
+/* ----- LOGO ----- */
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo-image {
+  height: 60px;  
+  width: auto;
+  display: block;
+}
+
+/* Logo nella sidebar (più grande) */
+.sidebar-logo .logo-image {
+  height: 70px;  
+}
+
+/* Logo nel footer (più piccolo) */
+.sidebar-right .logo-image {
+  height: 28px;  
+}
+
+/* Logo nelle pagine di auth (Login, Signup, ResetPassword) */
+.auth-logo .logo-image {
+  height: 80px;  
+}
+
+/* Su mobile, riduci leggermente */
+@media (max-width: 768px) {
+  .sidebar-logo .logo-image {
+    height: 52px;
+  }
+  .auth-logo .logo-image {
+    height: 60px;
   }
 }

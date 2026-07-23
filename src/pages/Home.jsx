@@ -110,8 +110,6 @@ export default function Home() {
     setError(null)
 
     try {
-      // ⚠️ Non possiamo ordinare direttamente su pinned_by_user perché è calcolato.
-      // Prendiamo i dati e li ordiniamo manualmente dopo.
       let query = supabase
         .from('posts_with_counts')
         .select('*')
@@ -160,12 +158,9 @@ export default function Home() {
 
       if (queryError) throw queryError
 
-      // 👇 ORDINA MANUALMENTE: pinned_by_user true prima, poi created_at
       const sortedData = (data || []).sort((a, b) => {
-        // pinned_by_user true prima
         if (a.pinned_by_user && !b.pinned_by_user) return -1
         if (!a.pinned_by_user && b.pinned_by_user) return 1
-        // Se hanno lo stesso stato di pin, ordina per created_at (più recente prima)
         return new Date(b.created_at) - new Date(a.created_at)
       })
 
@@ -257,6 +252,36 @@ export default function Home() {
     await fetchPosts(filter, 0, true)
   }
 
+  // ----- CHECK BLOCKED -----
+  function checkBlocked() {
+    if (user?.blocked) {
+      alert('🚫 Intruso Rilevato! Diventa anche tu una pianta 🌱')
+      return true
+    }
+    return false
+  }
+
+  // ----- SEGNA COME LETTO (per i pin) -----
+  async function handleMarkAsRead(postId) {
+    if (!user) return
+    try {
+      const { error } = await supabase
+        .from('user_pins')
+        .insert({
+          user_id: user.id,
+          post_id: postId
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      await refreshPosts()
+    } catch (err) {
+      console.error('❌ Errore segna come letto:', err)
+      alert('Errore durante l\'operazione')
+    }
+  }
+
   // ----- CREA POST -----
   async function handleCreatePost(e) {
     e.preventDefault()
@@ -264,6 +289,7 @@ export default function Home() {
       alert('Devi essere loggato per pubblicare')
       return
     }
+    if (checkBlocked()) return
     if (!newPostContent.trim() && !mediaUrl) {
       alert('Scrivi qualcosa o allega un file')
       return
@@ -325,6 +351,7 @@ export default function Home() {
       alert('Devi essere loggato per mettere like')
       return
     }
+    if (checkBlocked()) return
 
     try {
       const { data: existing } = await supabase
@@ -358,6 +385,7 @@ export default function Home() {
       alert('Devi essere loggato per repostare')
       return
     }
+    if (checkBlocked()) return
 
     try {
       const { data: existing } = await supabase
@@ -426,6 +454,7 @@ export default function Home() {
             <span className="nav-icon">💬</span>
             <span className="nav-label">Messaggi</span>
           </NavLink>
+          {/* 📣 FEEDBACK con emoji aggiornata */}
           <NavLink to="/feedback" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">📣</span>
             <span className="nav-label">Feedback</span>
@@ -580,14 +609,19 @@ export default function Home() {
                 className="card"
                 ref={index === posts.length - 1 ? lastPostRef : null}
               >
-                {/* 📌 ICONA FISSATO (solo se pinned_by_user è true per questo utente) */}
                 {post.pinned_by_user && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '4px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.2rem', color: 'var(--color-primary)' }}>📌</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '4px' }}>Fissato</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
-                      (commenta per sfissarlo)
-                    </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <div>
+                      <span style={{ fontSize: '1.2rem', color: 'var(--color-primary)' }}>📌</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '4px' }}>Fissato</span>
+                    </div>
+                    <button
+                      onClick={() => handleMarkAsRead(post.id)}
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: '0.7rem', padding: '2px 10px', borderColor: 'var(--color-border)' }}
+                    >
+                      Segna come letto
+                    </button>
                   </div>
                 )}
 
@@ -703,6 +737,7 @@ export default function Home() {
                         alert('Devi essere loggato per commentare')
                         return
                       }
+                      if (checkBlocked()) return
                       setCommentingPostId(isCommenting ? null : post.id)
                     }}
                     className="post-action"
@@ -786,7 +821,7 @@ export default function Home() {
         </div>
         <div className="sidebar-card" style={{ marginTop: '12px', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Logo variant="icon" style={{ height: '18px', width: '18px' }} />
+            <Logo variant="icon" style={{ height: '28px', width: '28px' }} />
             <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
               PotChat • {new Date().getFullYear()}
             </span>

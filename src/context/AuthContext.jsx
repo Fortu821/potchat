@@ -8,44 +8,41 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // ----- Funzione per arricchire l'utente con i dati del profilo -----
   async function enrichUserWithProfile(authUser) {
     if (!authUser) return null
 
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('username, display_name, bio, avatar_url')
+        .select('username, display_name, bio, avatar_url, role, blocked')
         .eq('id', authUser.id)
         .single()
 
       if (error) {
-        console.warn('⚠️ Profilo non trovato per:', authUser.id, error)
-        // Se il profilo non esiste (es. appena registrato, il trigger non è ancora partito),
-        // usiamo dati di fallback
         return {
           ...authUser,
           username: authUser.email?.split('@')[0] || 'utente',
-          display_name: authUser.email?.split('@')[0] || 'Utente'
+          display_name: authUser.email?.split('@')[0] || 'Utente',
+          blocked: false
         }
       }
 
-      // Unisce i dati di auth.users con quelli di profiles
       return {
         ...authUser,
         username: profile.username,
         display_name: profile.display_name,
         bio: profile.bio,
-        avatar_url: profile.avatar_url
+        avatar_url: profile.avatar_url,
+        role: profile.role,
+        blocked: profile.blocked || false
       }
 
     } catch (err) {
       console.error('❌ Errore nel recupero del profilo:', err)
-      return authUser // Se fallisce, restituisce l'utente base
+      return { ...authUser, blocked: false }
     }
   }
 
-  // ----- Check iniziale -----
   useEffect(() => {
     async function initializeAuth() {
       const { data: { session } } = await supabase.auth.getSession()
@@ -59,7 +56,6 @@ export function AuthProvider({ children }) {
 
     initializeAuth()
 
-    // ----- Ascolta cambiamenti di autenticazione -----
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
@@ -75,13 +71,12 @@ export function AuthProvider({ children }) {
     return () => listener?.subscription.unsubscribe()
   }, [])
 
-  // ----- FUNZIONI DI AUTENTICAZIONE -----
   const signUp = async (email, password, username) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { username } // Passa username a raw_user_meta_data per il trigger
+        data: { username }
       }
     })
     if (error) throw error
@@ -94,7 +89,6 @@ export function AuthProvider({ children }) {
       password
     })
     if (error) throw error
-    // Il trigger onAuthStateChange aggiornerà automaticamente lo stato user
     return data
   }
 

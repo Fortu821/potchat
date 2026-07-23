@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { parseText } from '../utils/textParser'
+import ReportButton from '../components/ReportButton'
 
 export default function Profile() {
   const { username } = useParams()
@@ -30,6 +31,7 @@ export default function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const avatarInputRef = useRef(null)
 
+  // ----- GESTIONE "me" -----
   useEffect(() => {
     if (username === 'me' && !user) {
       setLoading(false)
@@ -353,7 +355,7 @@ export default function Profile() {
 
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
 
-        {/* 🌱 CAMPIONI BOTANICI */}
+        {/* 🌱 CAMPI BOTANICI */}
         {profile.common_name && (
           <p style={{ margin: '4px 0', fontSize: '0.95rem' }}>
             🌿 <strong>Nome comune:</strong> {profile.common_name}
@@ -375,17 +377,17 @@ export default function Profile() {
         </p>
 
         <div className="profile-stats">
+          <Link to={`/profile/${profile.username}/followers`} className="profile-stats-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <span className="number">{followersCount}</span>
+            <span className="label">follower</span>
+          </Link>
+          <Link to={`/profile/${profile.username}/following`} className="profile-stats-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <span className="number">{followingCount}</span>
+            <span className="label">seguiti</span>
+          </Link>
           <div className="profile-stats-item">
             <span className="number">{posts.length}</span>
             <span className="label">post</span>
-          </div>
-          <div className="profile-stats-item">
-            <span className="number">{followersCount}</span>
-            <span className="label">follower</span>
-          </div>
-          <div className="profile-stats-item">
-            <span className="number">{followingCount}</span>
-            <span className="label">seguiti</span>
           </div>
         </div>
 
@@ -415,6 +417,13 @@ export default function Profile() {
               >
                 💬 Messaggio
               </button>
+              {/* 🚩 SEGNALA PROFILO */}
+              {user && !isOwnProfile && (
+                <ReportButton 
+                  targetType="profile" 
+                  targetId={profile.id} 
+                />
+              )}
             </>
           )}
         </div>
@@ -450,7 +459,6 @@ export default function Profile() {
             />
           </div>
 
-          {/* 🌱 CAMPI BOTANICI */}
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
               🌿 Nome comune (come pianta)

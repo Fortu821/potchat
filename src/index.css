@@ -1659,3 +1659,17 @@ h1, h2, h3, h4, h5, h6 {
     height: 60px;
   }
 }
+
+/* ----- BADGE PER NAVIGAZIONE (es. messaggi non letti) ----- */
+.nav-badge {
+  margin-left: auto;
+  background: var(--color-danger);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+  line-height: 20px;
+}

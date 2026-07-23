@@ -13,6 +13,8 @@ import Search from './pages/Search'
 import ResetPassword from './pages/ResetPassword'
 import Feedback from './pages/Feedback'
 import WelcomeModal from './components/WelcomeModal'
+import Followers from './pages/Followers'
+import Following from './pages/Following'
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(false)
@@ -35,6 +37,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile/:username" element={<Profile />} />
+          <Route path="/profile/:username/followers" element={<Followers />} />
+          <Route path="/profile/:username/following" element={<Following />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:conversationId" element={<Chat />} />

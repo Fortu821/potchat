@@ -40,6 +40,9 @@ export default function Home() {
   })
   const [statsLoading, setStatsLoading] = useState(true)
 
+  // ----- BADGE MESSAGGI NON LETTI -----
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+
   const observerRef = useRef()
   const lastPostRef = useCallback((node) => {
     if (loading || loadingMore) return
@@ -243,6 +246,43 @@ export default function Home() {
     }
 
     fetchStats()
+  }, [user])
+
+  // ----- CARICA MESSAGGI NON LETTI -----
+  useEffect(() => {
+    async function fetchUnreadMessages() {
+      if (!user) return
+      try {
+        const { data: conversations, error } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', user.id)
+
+        if (error) throw error
+
+        const convIds = conversations.map(c => c.conversation_id)
+
+        if (convIds.length === 0) {
+          setUnreadMessagesCount(0)
+          return
+        }
+
+        const { count, error: countError } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', convIds)
+          .is('read_at', null)
+          .neq('sender_id', user.id)
+
+        if (countError) throw countError
+
+        setUnreadMessagesCount(count || 0)
+      } catch (err) {
+        console.error('❌ Errore conteggio messaggi non letti:', err)
+      }
+    }
+
+    fetchUnreadMessages()
   }, [user])
 
   async function refreshPosts() {
@@ -453,8 +493,10 @@ export default function Home() {
           <NavLink to="/chats" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">💬</span>
             <span className="nav-label">Messaggi</span>
+            {unreadMessagesCount > 0 && (
+              <span className="nav-badge">{unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}</span>
+            )}
           </NavLink>
-          {/* 📣 FEEDBACK con emoji aggiornata */}
           <NavLink to="/feedback" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">📣</span>
             <span className="nav-label">Feedback</span>

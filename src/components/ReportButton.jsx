@@ -9,6 +9,7 @@ const REPORT_REASONS = [
   { value: 'hate_speech', label: '🚫 Discorso d\'odio' },
   { value: 'inappropriate_content', label: '🔞 Contenuto inappropriato' },
   { value: 'misinformation', label: '📰 Disinformazione' },
+  { value: 'not_plant', label: '🌱 Non è una pianta' },
   { value: 'other', label: '📌 Altro' },
 ]
 

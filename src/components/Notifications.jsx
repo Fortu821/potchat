@@ -12,7 +12,6 @@ export default function Notifications() {
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef(null)
 
-  // ----- CARICA NOTIFICHE -----
   async function fetchNotifications() {
     if (!user) return
 
@@ -39,7 +38,6 @@ export default function Notifications() {
       if (error) throw error
       setNotifications(data || [])
       
-      // Conta le non lette
       const unread = data?.filter(n => !n.read).length || 0
       setUnreadCount(unread)
 
@@ -50,7 +48,6 @@ export default function Notifications() {
     }
   }
 
-  // ----- SEGNA COME LETTE (quando apro il dropdown) -----
   async function markAllAsRead() {
     if (!user || unreadCount === 0) return
 
@@ -64,7 +61,6 @@ export default function Notifications() {
       if (error) throw error
       setUnreadCount(0)
       
-      // Aggiorna lo stato locale
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       )
@@ -74,7 +70,6 @@ export default function Notifications() {
     }
   }
 
-  // ----- SEGNA UNA NOTIFICA COME LETTA (al click) -----
   async function markAsRead(notificationId) {
     try {
       const { error } = await supabase
@@ -96,7 +91,6 @@ export default function Notifications() {
     }
   }
 
-  // ----- APRI/CHIUDI DROPDOWN -----
   const toggleDropdown = () => {
     if (isOpen) {
       setIsOpen(false)
@@ -108,13 +102,11 @@ export default function Notifications() {
     }
   }
 
-  // ----- REAL-TIME: ascolta nuove notifiche -----
   useEffect(() => {
     if (!user) return
 
     fetchNotifications()
 
-    // Sottoscrizione alle nuove notifiche in tempo reale
     const channel = supabase
       .channel('notifications')
       .on(
@@ -126,7 +118,6 @@ export default function Notifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          // Aggiunge la nuova notifica in cima
           const newNotification = payload.new
           setNotifications(prev => [newNotification, ...prev])
           setUnreadCount(prev => prev + 1)
@@ -134,7 +125,6 @@ export default function Notifications() {
       )
       .subscribe()
 
-    // Chiudi dropdown se clicchi fuori
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false)
@@ -148,7 +138,6 @@ export default function Notifications() {
     }
   }, [user])
 
-  // ----- RENDER NOTIFICA -----
   function renderNotification(notification) {
     const actor = notification.actor
     const actorName = actor?.display_name || actor?.username || 'Qualcuno'
@@ -180,6 +169,10 @@ export default function Notifications() {
       case 'follow':
         message = `ti ha seguito`
         link = actorLink
+        break
+      case 'message':
+        message = `ti ha inviato un messaggio`
+        link = notification.target_id ? `/chat/${notification.target_id}` : '#'
         break
       default:
         message = `ha interagito con te`
@@ -236,10 +229,8 @@ export default function Notifications() {
     )
   }
 
-  // ----- RENDER -----
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
-      {/* BOTTONE CAMPANELLA */}
       <button
         onClick={toggleDropdown}
         style={{
@@ -273,7 +264,6 @@ export default function Notifications() {
         )}
       </button>
 
-      {/* DROPDOWN */}
       {isOpen && (
         <div
           style={{

@@ -1704,3 +1704,201 @@ h1, h2, h3, h4, h5, h6 {
     right: 24px;
   }
 }
+
+/* ============================================================
+   SETTINGS PAGE STYLES
+   ============================================================ */
+
+.settings-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--color-text-secondary);
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.settings-item:hover {
+  background: var(--color-border);
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.settings-item-danger:hover {
+  background: #fde8e8;
+  color: var(--color-danger);
+}
+
+.settings-item .settings-arrow {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.settings-form {
+  padding: 12px 12px 0 12px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+}
+
+.settings-form-group {
+  margin-bottom: 10px;
+}
+
+.settings-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--color-text-secondary);
+}
+
+.settings-error {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  margin: 4px 0 8px 0;
+}
+
+.settings-success {
+  color: var(--color-success);
+  font-size: 0.85rem;
+  margin: 4px 0 8px 0;
+}
+
+.settings-warning {
+  background: #fff3cd;
+  color: #856404;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  margin: 0 0 12px 0;
+  border-left: 4px solid #ffc107;
+}
+
+.settings-footer {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  margin-top: 24px;
+}
+
+/* ============================================================
+   POLICY PAGE STYLES
+   ============================================================ */
+
+.policy-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-sm);
+}
+
+.policy-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
+}
+
+.policy-badge {
+  font-size: 2rem;
+}
+
+.policy-download-btn {
+  margin-left: auto;
+}
+
+.policy-content {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.policy-content h2 {
+  color: var(--color-primary);
+  font-size: 1.3rem;
+  margin: 20px 0 8px 0;
+}
+
+.policy-content h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 16px 0 4px 0;
+  color: var(--color-text-secondary);
+}
+
+.policy-content p {
+  margin: 6px 0;
+}
+
+.policy-content li {
+  margin: 2px 0;
+}
+
+/* ============================================================
+   RESPONSIVE SETTINGS
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .settings-card {
+    padding: 12px 14px;
+  }
+  .settings-item {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .policy-card {
+    padding: 16px 18px;
+  }
+  .policy-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .policy-download-btn {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Rimuove il grassetto dai titoli nelle policy */
+.policy-content h1,
+.policy-content h3 {
+  font-weight: normal;
+}

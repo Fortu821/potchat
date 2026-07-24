@@ -11,15 +11,13 @@ import Chats from './pages/Chats'
 import Chat from './pages/Chat'
 import Search from './pages/Search'
 import ResetPassword from './pages/ResetPassword'
-import Feedback from './pages/Feedback'
 import WelcomeModal from './components/WelcomeModal'
 import Followers from './pages/Followers'
 import Following from './pages/Following'
-import Terms from './pages/Terms'
-import Privacy from './pages/Privacy'
-import Cookies from './pages/Cookies'
-import Legal from './pages/Legal'
 import Settings from './pages/Settings'
+import SettingsPolicy from './pages/SettingsPolicy'
+import SettingsFeedback from './pages/SettingsFeedback'
+import SettingsContact from './pages/SettingsContact'
 import SettingsButton from './components/SettingsButton'
 
 function App() {
@@ -51,12 +49,12 @@ function App() {
           <Route path="/chat/:conversationId" element={<Chat />} />
           <Route path="/search" element={<Search />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/feedback" element={<Feedback />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/cookies" element={<Cookies />} />
-          <Route path="/legal" element={<Legal />} />
+
+          {/* SETTINGS */}
           <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/:type" element={<SettingsPolicy />} />
+          <Route path="/settings/feedback" element={<SettingsFeedback />} />
+          <Route path="/settings/contact" element={<SettingsContact />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

@@ -56,6 +56,7 @@ export default function Home() {
   }, [loading, loadingMore, hasMore])
 
   const POSTS_PER_PAGE = 10
+  const isModerator = user?.role === 'moderator' || user?.role === 'admin'
 
   // ----- NOTIFICHE PUSH -----
   useEffect(() => {
@@ -161,7 +162,13 @@ export default function Home() {
 
       if (queryError) throw queryError
 
-      const sortedData = (data || []).sort((a, b) => {
+      // 🔒 FILTRA I POST NASCOSTI (per utenti normali)
+      let filteredData = data || []
+      if (!isModerator) {
+        filteredData = filteredData.filter(post => !post.hidden)
+      }
+
+      const sortedData = filteredData.sort((a, b) => {
         if (a.pinned_by_user && !b.pinned_by_user) return -1
         if (!a.pinned_by_user && b.pinned_by_user) return 1
         return new Date(b.created_at) - new Date(a.created_at)
@@ -322,6 +329,27 @@ export default function Home() {
     }
   }
 
+  // ----- NASCONDI / RIPRISTINA POST (solo moderatori) -----
+  async function handleToggleHide(postId, currentHidden) {
+    if (!isModerator) return
+    const action = currentHidden ? 'ripristinare' : 'nascondere'
+    if (!confirm(`Sei sicuro di voler ${action} questo post?`)) return
+
+    try {
+      const { error } = await supabase
+        .rpc('toggle_post_hidden', {
+          post_id: postId,
+          hide: !currentHidden
+        })
+
+      if (error) throw error
+      await refreshPosts()
+    } catch (err) {
+      console.error('❌ Errore toggle hide:', err)
+      alert('Errore durante l\'operazione')
+    }
+  }
+
   // ----- CREA POST -----
   async function handleCreatePost(e) {
     e.preventDefault()
@@ -354,8 +382,6 @@ export default function Home() {
       setMediaUrl(null)
       setMediaType(null)
       await refreshPosts()
-
-      // 👇 CONTROLLA ACHIEVEMENTS
       await checkAchievements(user.id)
 
     } catch (err) {
@@ -418,8 +444,6 @@ export default function Home() {
       }
 
       await refreshPosts()
-
-      // 👇 CONTROLLA ACHIEVEMENTS
       await checkAchievements(user.id)
 
     } catch (err) {
@@ -456,8 +480,6 @@ export default function Home() {
       }
 
       await refreshPosts()
-
-      // 👇 CONTROLLA ACHIEVEMENTS
       await checkAchievements(user.id)
 
     } catch (err) {
@@ -509,10 +531,7 @@ export default function Home() {
               <span className="nav-badge">{unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}</span>
             )}
           </NavLink>
-          <NavLink to="/feedback" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-            <span className="nav-icon">📣</span>
-            <span className="nav-label">Feedback</span>
-          </NavLink>
+          {/* 👇 FEEDBACK RIMOSSO (ora è in Impostazioni) */}
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
             <span className="nav-label">Profilo</span>
@@ -647,6 +666,7 @@ export default function Home() {
             const isReposted = post.is_reposted_by_user || false
             const isCommenting = commentingPostId === post.id
             const isOwnPost = user && user.id === post.user_id
+            const isHidden = post.hidden || false
 
             let mediaType = post.media_type
             if (post.media_url && !mediaType) {
@@ -663,6 +683,22 @@ export default function Home() {
                 className="card"
                 ref={index === posts.length - 1 ? lastPostRef : null}
               >
+                {/* 🔒 BADGE NASCOSTO (solo per moderatori) */}
+                {isModerator && isHidden && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-danger)', fontWeight: 'bold' }}>
+                      🔒 Nascosto (solo moderatori)
+                    </span>
+                    <button
+                      onClick={() => handleToggleHide(post.id, isHidden)}
+                      className="btn btn-success btn-sm"
+                      style={{ fontSize: '0.7rem', padding: '2px 10px' }}
+                    >
+                      Ripristina
+                    </button>
+                  </div>
+                )}
+
                 {post.pinned_by_user && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <div>
@@ -697,6 +733,17 @@ export default function Home() {
                       @{post.username}
                     </Link>
                   </div>
+                  {/* Pulsante nascondi per moderatori (vicino all'autore) */}
+                  {isModerator && !isHidden && (
+                    <button
+                      onClick={() => handleToggleHide(post.id, isHidden)}
+                      className="btn btn-danger btn-sm"
+                      style={{ fontSize: '0.7rem', padding: '2px 10px', marginLeft: 'auto' }}
+                      title="Nascondi questo post (solo moderatori)"
+                    >
+                      🔒 Nascondi
+                    </button>
+                  )}
                 </div>
 
                 <div className="card-content">{parseText(post.content)}</div>

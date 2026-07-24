@@ -15,6 +15,12 @@ import Feedback from './pages/Feedback'
 import WelcomeModal from './components/WelcomeModal'
 import Followers from './pages/Followers'
 import Following from './pages/Following'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
+import Cookies from './pages/Cookies'
+import Legal from './pages/Legal'
+import Settings from './pages/Settings'
+import SettingsButton from './components/SettingsButton'
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(false)
@@ -32,6 +38,7 @@ function App() {
         {showWelcome && (
           <WelcomeModal onClose={() => setShowWelcome(false)} />
         )}
+        <SettingsButton />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -45,6 +52,11 @@ function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/feedback" element={<Feedback />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/cookies" element={<Cookies />} />
+          <Route path="/legal" element={<Legal />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

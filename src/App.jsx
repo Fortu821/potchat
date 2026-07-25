@@ -19,6 +19,7 @@ import SettingsPolicy from './pages/SettingsPolicy'
 import SettingsFeedback from './pages/SettingsFeedback'
 import SettingsContact from './pages/SettingsContact'
 import SettingsButton from './components/SettingsButton'
+import ModerationPanel from './pages/ModerationPanel'
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(false)
@@ -49,6 +50,7 @@ function App() {
           <Route path="/chat/:conversationId" element={<Chat />} />
           <Route path="/search" element={<Search />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/moderation" element={<ModerationPanel />} />
 
           {/* SETTINGS */}
           <Route path="/settings" element={<Settings />} />

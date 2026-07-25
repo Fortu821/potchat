@@ -569,6 +569,15 @@ export default function Home() {
               <span className="nav-badge">{unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}</span>
             )}
           </NavLink>
+
+          {/* 🛡️ MODERAZIONE - solo per moderatori/admin */}
+          {(user?.role === 'moderator' || user?.role === 'admin') && (
+            <NavLink to="/moderation" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <span className="nav-icon">🛡️</span>
+              <span className="nav-label">Moderazione</span>
+            </NavLink>
+          )}
+
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
             <span className="nav-label">Profilo</span>

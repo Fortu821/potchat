@@ -1,9 +1,11 @@
 // supabase/functions/moderate-content/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-// 🔐 LEGGE I WEBHOOK DAI SECRETS
+// 🔐 LEGGE I WEBHOOK E LA SERVICE_ROLE_KEY DAI SECRETS
 const DISCORD_WEBHOOK_BOT = Deno.env.get("DISCORD_WEBHOOK_BOT") || ""
 const DISCORD_WEBHOOK_SEGNALAZIONI = Deno.env.get("DISCORD_WEBHOOK_SEGNALAZIONI") || ""
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
 
 // 👇 BLACKLIST
 const BLACKLIST = [
@@ -14,17 +16,13 @@ const BLACKLIST = [
   "omicidio", "stupro", "pedofilia", "pedopornografia", "zoofilia",
   "terrorismo", "bomba", "attentato", "hitler", "nazista", "mafia",
   "vincita", "premio", "clicca qui", "link sospetto", "offerta speciale",
-  "nudo", "sesso", "porno", "hard", "link", "url", "phishing", "truffa", "scam", 
-  "frode", "furto", "hacker", "malware", "virus", "spyware", "ransomware", "trojan", 
-  "keylogger", "botnet", "ddos", "exploit", "vulnerabilità", "backdoor", "rootkit", "worm", 
-  "adware", "spammer", "scammer", "link", "adulti", "sesso", "sessi", "sessuale", "pornografia", 
-  "porno", "erotico", "erotica", "erotici", "erotiche", "erotismo", "erotismi", "erotico", 
-  "erotica", "erotici", "erotiche", "erotismo", "erotismi", "truffa", "vinci", "vincerai", 
-  "potresti vincere", "clicca qui", "link sospetto", "offerta speciale"
-  
+  "nudo", "sesso", "porno", "hard", "link", "url", "phishing", "truffa", "scam",
+  "frode", "furto", "hacker", "malware", "virus", "spyware", "ransomware", "trojan",
+  "keylogger", "botnet", "ddos", "exploit", "vulnerabilità", "backdoor", "rootkit", "worm",
+  "adware", "spammer", "scammer", "adulti", "sessuale", "pornografia", "erotico", "vincita",
+  "vincerai", "potresti vincere"
 ]
 
-// 📦 FUNZIONI
 function normalizeText(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\sàèéìòù]/g, " ").replace(/\s+/g, " ").trim()
 }
@@ -40,6 +38,43 @@ function containsBlacklistedWords(text: string): string[] {
   return found
 }
 
+async function saveReportToDatabase(payload: any) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('⚠️ Supabase credentials mancanti, salto salvataggio report')
+    return
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        reporter_id: payload.user_id,
+        target_type: payload.type,
+        target_id: payload.content_id,
+        reason: 'moderation_bot',
+        description: `Contenuto sospetto rilevato dal bot di moderazione. Parole trovate: ${payload.words.join(', ')}. Contenuto originale: ${payload.content}`,
+        status: 'pending'
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Errore salvataggio report:', errorText)
+    } else {
+      console.log(`✅ Report salvato nel database per ${payload.type} ${payload.content_id}`)
+    }
+  } catch (err) {
+    console.error('❌ Errore durante il salvataggio del report:', err)
+  }
+}
+
+// 📧 INVIO A DISCORD
 async function sendToDiscord(webhookUrl: string, payload: any) {
   if (!webhookUrl) return
   await fetch(webhookUrl, {
@@ -64,7 +99,7 @@ async function sendToDiscord(webhookUrl: string, payload: any) {
   })
 }
 
-// ✅ CORS HEADERS (permette richieste dal frontend)
+// ✅ CORS HEADERS
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -73,15 +108,10 @@ const CORS_HEADERS = {
 
 // 🧠 HANDLER PRINCIPALE
 serve(async (req) => {
-  // Gestisci preflight OPTIONS (CORS)
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: CORS_HEADERS,
-    })
+    return new Response(null, { status: 204, headers: CORS_HEADERS })
   }
 
-  // Solo POST
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -104,9 +134,15 @@ serve(async (req) => {
 
     if (foundWords.length > 0) {
       const payload = { content_id, user_id, content, type, words: foundWords }
+
+      // 1. Invia su Discord
       await sendToDiscord(DISCORD_WEBHOOK_BOT, payload)
       await sendToDiscord(DISCORD_WEBHOOK_SEGNALAZIONI, payload)
-      console.log(`✅ Segnalazione inviata per ${type} ${content_id}`)
+      console.log(`✅ Segnalazione inviata su Discord per ${type} ${content_id}`)
+
+      // 2. Salva nel database (tabella reports)
+      await saveReportToDatabase(payload)
+
     } else {
       console.log(`✅ Contenuto ${type} ${content_id} pulito`)
     }

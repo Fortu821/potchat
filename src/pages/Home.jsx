@@ -11,6 +11,9 @@ import { parseText } from '../utils/textParser'
 import Logo from '../components/Logo'
 import { checkAchievements } from '../utils/achievementHelper'
 
+// 🔥 Importa l'anon key dal file .env
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 export default function Home() {
   const { user, signOut } = useAuth()
 
@@ -162,7 +165,6 @@ export default function Home() {
 
       if (queryError) throw queryError
 
-      // 🔒 FILTRA I POST NASCOSTI (per utenti normali)
       let filteredData = data || []
       if (!isModerator) {
         filteredData = filteredData.filter(post => !post.hidden)
@@ -350,6 +352,35 @@ export default function Home() {
     }
   }
 
+  // ----- CHIAMA LA EDGE FUNCTION DI MODERAZIONE -----
+  async function callModeration(contentId, content, type) {
+    try {
+      const response = await fetch(
+        `https://${import.meta.env.VITE_SUPABASE_URL.replace('https://', '')}/functions/v1/moderate-content`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({
+            content_id: contentId,
+            user_id: user.id,
+            content: content,
+            type: type
+          })
+        }
+      )
+      if (!response.ok) {
+        console.warn('⚠️ Moderazione non riuscita:', await response.text())
+      }
+    } catch (err) {
+      // Silenzioso, non bloccare l'utente
+      console.warn('⚠️ Errore chiamata moderazione:', err)
+    }
+  }
+
   // ----- CREA POST -----
   async function handleCreatePost(e) {
     e.preventDefault()
@@ -367,7 +398,7 @@ export default function Home() {
 
     setIsSubmitting(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('posts')
         .insert({
           user_id: user.id,
@@ -375,6 +406,8 @@ export default function Home() {
           media_url: mediaUrl || null,
           media_type: mediaType || null
         })
+        .select()
+        .single()
 
       if (error) throw error
 
@@ -383,6 +416,11 @@ export default function Home() {
       setMediaType(null)
       await refreshPosts()
       await checkAchievements(user.id)
+
+      // 🔥 CHIAMA LA MODERAZIONE (se c'è contenuto testuale)
+      if (data?.content) {
+        await callModeration(data.id, data.content, 'post')
+      }
 
     } catch (err) {
       console.error('❌ Errore nella pubblicazione:', err)
@@ -531,7 +569,6 @@ export default function Home() {
               <span className="nav-badge">{unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}</span>
             )}
           </NavLink>
-          {/* 👇 FEEDBACK RIMOSSO (ora è in Impostazioni) */}
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
             <span className="nav-label">Profilo</span>
@@ -683,7 +720,6 @@ export default function Home() {
                 className="card"
                 ref={index === posts.length - 1 ? lastPostRef : null}
               >
-                {/* 🔒 BADGE NASCOSTO (solo per moderatori) */}
                 {isModerator && isHidden && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--color-danger)', fontWeight: 'bold' }}>
@@ -733,7 +769,6 @@ export default function Home() {
                       @{post.username}
                     </Link>
                   </div>
-                  {/* Pulsante nascondi per moderatori (vicino all'autore) */}
                   {isModerator && !isHidden && (
                     <button
                       onClick={() => handleToggleHide(post.id, isHidden)}

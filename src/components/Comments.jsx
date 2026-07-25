@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { parseText } from '../utils/textParser'
-import { checkAchievements } from '../utils/achievementHelper'
+
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function Comments({ postId }) {
   const { user } = useAuth()
@@ -16,6 +17,34 @@ export default function Comments({ postId }) {
 
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editCommentContent, setEditCommentContent] = useState('')
+
+  // ----- CHIAMA LA EDGE FUNCTION DI MODERAZIONE -----
+  async function callModeration(contentId, content, type) {
+    try {
+      const response = await fetch(
+        `https://${import.meta.env.VITE_SUPABASE_URL.replace('https://', '')}/functions/v1/moderate-content`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({
+            content_id: contentId,
+            user_id: user.id,
+            content: content,
+            type: type
+          })
+        }
+      )
+      if (!response.ok) {
+        console.warn('⚠️ Moderazione non riuscita:', await response.text())
+      }
+    } catch (err) {
+      console.warn('⚠️ Errore chiamata moderazione:', err)
+    }
+  }
 
   // ----- CHECK BLOCKED -----
   function checkBlocked() {
@@ -86,7 +115,7 @@ export default function Comments({ postId }) {
 
     setIsSubmitting(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('comments')
         .insert({
           user_id: user.id,
@@ -94,6 +123,8 @@ export default function Comments({ postId }) {
           parent_id: replyTo?.id || null,
           content: newComment.trim()
         })
+        .select()
+        .single()
 
       if (error) throw error
 
@@ -101,8 +132,10 @@ export default function Comments({ postId }) {
       setReplyTo(null)
       await fetchComments()
 
-      // 👇 CONTROLLA ACHIEVEMENTS
-      await checkAchievements(user.id)
+      // 🔥 CHIAMA LA MODERAZIONE
+      if (data?.content) {
+        await callModeration(data.id, data.content, 'comment')
+      }
 
     } catch (err) {
       console.error('❌ Errore nell\'invio commento:', err)
@@ -263,7 +296,7 @@ export default function Comments({ postId }) {
               if (checkBlocked()) return
               if (!confirm('💬 Sei sicuro di voler rispondere a questo commento?')) return
               try {
-                await supabase
+                const { data, error } = await supabase
                   .from('comments')
                   .insert({
                     user_id: user.id,
@@ -271,10 +304,19 @@ export default function Comments({ postId }) {
                     parent_id: comment.id,
                     content: content.trim()
                   })
+                  .select()
+                  .single()
+
+                if (error) throw error
+
                 await fetchComments()
                 setShowReplyForm(false)
-                // 👇 CONTROLLA ACHIEVEMENTS
-                await checkAchievements(user.id)
+
+                // 🔥 CHIAMA LA MODERAZIONE
+                if (data?.content) {
+                  await callModeration(data.id, data.content, 'comment')
+                }
+
               } catch (err) {
                 console.error('❌ Errore risposta:', err)
                 alert('Errore nell\'invio della risposta')

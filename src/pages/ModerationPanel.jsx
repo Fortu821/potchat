@@ -12,11 +12,13 @@ export default function ModerationPanel() {
   const [blockedUsers, setBlockedUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('reports')
+  const [isPanelUnlocked, setIsPanelUnlocked] = useState(false)
   const [pinModalOpen, setPinModalOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState(null)
   const [pinAction, setPinAction] = useState(null)
 
   const isModerator = user?.role === 'moderator' || user?.role === 'admin'
+  const hasPin = user?.moderation_pin && user.moderation_pin.length > 0
 
   const verifyPin = async () => {
     if (pendingAction) {
@@ -25,6 +27,7 @@ export default function ModerationPanel() {
     setPinModalOpen(false)
     setPendingAction(null)
     setPinAction(null)
+    setIsPanelUnlocked(true)
   }
 
   const requirePin = (action, actionName) => {
@@ -32,11 +35,6 @@ export default function ModerationPanel() {
     setPinAction(actionName)
     setPinModalOpen(true)
   }
-
-  useEffect(() => {
-    if (!isModerator) return
-    fetchAllData()
-  }, [isModerator])
 
   async function fetchAllData() {
     setLoading(true)
@@ -49,7 +47,6 @@ export default function ModerationPanel() {
           reviewer:reviewed_by (username, display_name)
         `)
         .order('created_at', { ascending: false })
-
       setReports(reportsData || [])
 
       const { data: hiddenData } = await supabase
@@ -57,7 +54,6 @@ export default function ModerationPanel() {
         .select('*')
         .eq('hidden', true)
         .order('created_at', { ascending: false })
-
       setHiddenPosts(hiddenData || [])
 
       const { data: blockedData } = await supabase
@@ -65,7 +61,6 @@ export default function ModerationPanel() {
         .select('id, username, display_name, avatar_url, blocked')
         .eq('blocked', true)
         .order('created_at', { ascending: false })
-
       setBlockedUsers(blockedData || [])
 
     } catch (err) {
@@ -74,6 +69,25 @@ export default function ModerationPanel() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!isModerator) return
+
+    if (!isPanelUnlocked) {
+      if (hasPin) {
+        setPinAction('accedere al pannello di moderazione')
+      } else {
+        setPinAction('impostare il PIN di moderazione')
+      }
+      setPinModalOpen(true)
+    }
+  }, [isModerator, hasPin, isPanelUnlocked])
+
+  useEffect(() => {
+    if (isPanelUnlocked) {
+      fetchAllData()
+    }
+  }, [isPanelUnlocked])
 
   async function updateReportStatus(reportId, status, actionTaken = null) {
     try {
@@ -135,6 +149,28 @@ export default function ModerationPanel() {
         <p style={{ color: 'var(--color-text-muted)' }}>Solo moderatori e amministratori possono accedere a questa pagina.</p>
         <Link to="/" className="btn btn-secondary">← Torna alla home</Link>
       </div>
+    )
+  }
+
+  if (!isPanelUnlocked) {
+    return (
+      <>
+        {pinModalOpen && (
+          <PinModal
+            onConfirm={verifyPin}
+            onCancel={() => {
+              setPinModalOpen(false)
+              setPendingAction(null)
+              setPinAction(null)
+              window.location.href = '/'
+            }}
+            action={pinAction}
+          />
+        )}
+        <div className="app-container text-center" style={{ paddingTop: '60px' }}>
+          <div className="text-muted">🔐 Inserisci il PIN per accedere</div>
+        </div>
+      </>
     )
   }
 

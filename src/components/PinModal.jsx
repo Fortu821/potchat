@@ -14,7 +14,6 @@ export default function PinModal({ onConfirm, onCancel, action }) {
 
   const hasPin = user?.moderation_pin && user.moderation_pin.length > 0
 
-  // ----- VERIFICA PIN -----
   const handleVerify = async (e) => {
     e.preventDefault()
     if (!pin || pin.length < 4) {
@@ -30,7 +29,6 @@ export default function PinModal({ onConfirm, onCancel, action }) {
         await onConfirm()
         setPin('')
         setError('')
-        onCancel()
       } else {
         setError('PIN errato. Riprova.')
         setPin('')
@@ -42,7 +40,6 @@ export default function PinModal({ onConfirm, onCancel, action }) {
     }
   }
 
-  // ----- IMPOSTA NUOVO PIN -----
   const handleSetPin = async (e) => {
     e.preventDefault()
     if (!newPin || newPin.length < 4) {
@@ -66,10 +63,12 @@ export default function PinModal({ onConfirm, onCancel, action }) {
       if (error) throw error
 
       user.moderation_pin = newPin
+
       setIsSettingPin(false)
       setNewPin('')
       setConfirmPin('')
       setError('')
+
       alert('✅ PIN impostato con successo! Ora inseriscilo per completare l\'azione.')
     } catch (err) {
       setError('Errore durante il salvataggio del PIN')
@@ -78,7 +77,6 @@ export default function PinModal({ onConfirm, onCancel, action }) {
     }
   }
 
-  // ----- RENDER -----
   return (
     <div
       style={{

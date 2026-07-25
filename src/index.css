@@ -1902,3 +1902,32 @@ h1, h2, h3, h4, h5, h6 {
 .policy-content h3 {
   font-weight: normal;
 }
+
+/* ============================================================
+   IMPOSTAZIONI - VISIBILITÀ PER DISPOSITIVO
+   ============================================================ */
+
+/* Su desktop/tablet (> 768px): mostra il link nella sidebar, nascondi nel profilo */
+.settings-mobile-link {
+  display: none;
+}
+
+/* Su mobile (< 768px): nascondi il link nella sidebar, mostra nel profilo */
+@media (max-width: 768px) {
+  .settings-desktop-link {
+    display: none !important;
+  }
+  .settings-mobile-link {
+    display: inline-flex !important;
+  }
+}
+
+/* Per schermi medi e grandi (>= 769px): solo sidebar */
+@media (min-width: 769px) {
+  .settings-desktop-link {
+    display: flex !important;
+  }
+  .settings-mobile-link {
+    display: none !important;
+  }
+}

@@ -18,7 +18,6 @@ import Settings from './pages/Settings'
 import SettingsPolicy from './pages/SettingsPolicy'
 import SettingsFeedback from './pages/SettingsFeedback'
 import SettingsContact from './pages/SettingsContact'
-import SettingsButton from './components/SettingsButton'
 import ModerationPanel from './pages/ModerationPanel'
 
 function App() {
@@ -37,7 +36,6 @@ function App() {
         {showWelcome && (
           <WelcomeModal onClose={() => setShowWelcome(false)} />
         )}
-        <SettingsButton />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -50,13 +48,11 @@ function App() {
           <Route path="/chat/:conversationId" element={<Chat />} />
           <Route path="/search" element={<Search />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/moderation" element={<ModerationPanel />} />
-
-          {/* SETTINGS */}
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/:type" element={<SettingsPolicy />} />
           <Route path="/settings/feedback" element={<SettingsFeedback />} />
           <Route path="/settings/contact" element={<SettingsContact />} />
+          <Route path="/moderation" element={<ModerationPanel />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

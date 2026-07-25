@@ -393,12 +393,18 @@ export default function Profile() {
 
         <div className="profile-actions">
           {isOwnProfile ? (
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="btn btn-secondary"
-            >
-              {isEditing ? '✕ Annulla' : '✏️ Modifica profilo'}
-            </button>
+            <>
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className="btn btn-secondary"
+              >
+                {isEditing ? '✕ Annulla' : '✏️ Modifica profilo'}
+              </button>
+              {/* IMPOSTAZIONI - visibile solo su mobile */}
+              <Link to="/settings" className="btn btn-secondary btn-sm settings-mobile-link">
+                ⚙️ Impostazioni
+              </Link>
+            </>
           ) : (
             <>
               <button
@@ -535,7 +541,6 @@ export default function Profile() {
         </form>
       )}
 
-      {/* 🏆 TROFEI */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <Achievements userId={profile.id} />
       </div>

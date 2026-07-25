@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('username, display_name, bio, avatar_url, role, blocked')
+        .select('username, display_name, bio, avatar_url, role, blocked, moderation_pin')
         .eq('id', authUser.id)
         .single()
 
@@ -23,7 +23,8 @@ export function AuthProvider({ children }) {
           ...authUser,
           username: authUser.email?.split('@')[0] || 'utente',
           display_name: authUser.email?.split('@')[0] || 'Utente',
-          blocked: false
+          blocked: false,
+          moderation_pin: null
         }
       }
 
@@ -34,12 +35,13 @@ export function AuthProvider({ children }) {
         bio: profile.bio,
         avatar_url: profile.avatar_url,
         role: profile.role,
-        blocked: profile.blocked || false
+        blocked: profile.blocked || false,
+        moderation_pin: profile.moderation_pin || null
       }
 
     } catch (err) {
       console.error('❌ Errore nel recupero del profilo:', err)
-      return { ...authUser, blocked: false }
+      return { ...authUser, blocked: false, moderation_pin: null }
     }
   }
 

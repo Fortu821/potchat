@@ -10,8 +10,8 @@ import MediaUpload from '../components/MediaUpload'
 import { parseText } from '../utils/textParser'
 import Logo from '../components/Logo'
 import { checkAchievements } from '../utils/achievementHelper'
+import PinModal from '../components/PinModal'
 
-// 🔥 Importa l'anon key dal file .env
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function Home() {
@@ -46,6 +46,10 @@ export default function Home() {
 
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
+  const [pinModalOpen, setPinModalOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
+  const [pinAction, setPinAction] = useState(null)
+
   const observerRef = useRef()
   const lastPostRef = useCallback((node) => {
     if (loading || loadingMore) return
@@ -61,7 +65,21 @@ export default function Home() {
   const POSTS_PER_PAGE = 10
   const isModerator = user?.role === 'moderator' || user?.role === 'admin'
 
-  // ----- NOTIFICHE PUSH -----
+  const verifyPin = async () => {
+    if (pendingAction) {
+      await pendingAction()
+    }
+    setPinModalOpen(false)
+    setPendingAction(null)
+    setPinAction(null)
+  }
+
+  const requirePin = (action, actionName) => {
+    setPendingAction(() => action)
+    setPinAction(actionName)
+    setPinModalOpen(true)
+  }
+
   useEffect(() => {
     if (!user) return
 
@@ -104,7 +122,6 @@ export default function Home() {
     return () => channel.unsubscribe()
   }, [user])
 
-  // ----- CARICA POST -----
   useEffect(() => {
     setPage(0)
     setPosts([])
@@ -200,7 +217,6 @@ export default function Home() {
     await fetchPosts(filter, page, false)
   }
 
-  // ----- CARICA STATS -----
   useEffect(() => {
     async function fetchStats() {
       if (!user) {
@@ -257,7 +273,6 @@ export default function Home() {
     fetchStats()
   }, [user])
 
-  // ----- CARICA MESSAGGI NON LETTI -----
   useEffect(() => {
     async function fetchUnreadMessages() {
       if (!user) return
@@ -301,7 +316,6 @@ export default function Home() {
     await fetchPosts(filter, 0, true)
   }
 
-  // ----- CHECK BLOCKED -----
   function checkBlocked() {
     if (user?.blocked) {
       alert('🚫 Intruso Rilevato! Diventa anche tu una pianta 🌱')
@@ -310,7 +324,6 @@ export default function Home() {
     return false
   }
 
-  // ----- SEGNA COME LETTO (per i pin) -----
   async function handleMarkAsRead(postId) {
     if (!user) return
     try {
@@ -331,28 +344,26 @@ export default function Home() {
     }
   }
 
-  // ----- NASCONDI / RIPRISTINA POST (solo moderatori) -----
-  async function handleToggleHide(postId, currentHidden) {
-    if (!isModerator) return
-    const action = currentHidden ? 'ripristinare' : 'nascondere'
-    if (!confirm(`Sei sicuro di voler ${action} questo post?`)) return
-
-    try {
-      const { error } = await supabase
-        .rpc('toggle_post_hidden', {
-          post_id: postId,
-          hide: !currentHidden
-        })
-
-      if (error) throw error
-      await refreshPosts()
-    } catch (err) {
-      console.error('❌ Errore toggle hide:', err)
-      alert('Errore durante l\'operazione')
-    }
+  const handleToggleHide = (postId) => {
+    requirePin(
+      async () => {
+        try {
+          const { error } = await supabase
+            .rpc('toggle_post_hidden', {
+              post_id: postId,
+              hide: true
+            })
+          if (error) throw error
+          await refreshPosts()
+        } catch (err) {
+          console.error('❌ Errore nascondi post:', err)
+          alert('Errore durante l\'operazione')
+        }
+      },
+      'nascondere questo post'
+    )
   }
 
-  // ----- CHIAMA LA EDGE FUNCTION DI MODERAZIONE -----
   async function callModeration(contentId, content, type) {
     try {
       const response = await fetch(
@@ -376,12 +387,10 @@ export default function Home() {
         console.warn('⚠️ Moderazione non riuscita:', await response.text())
       }
     } catch (err) {
-      // Silenzioso, non bloccare l'utente
       console.warn('⚠️ Errore chiamata moderazione:', err)
     }
   }
 
-  // ----- CREA POST -----
   async function handleCreatePost(e) {
     e.preventDefault()
     if (!user) {
@@ -417,7 +426,6 @@ export default function Home() {
       await refreshPosts()
       await checkAchievements(user.id)
 
-      // 🔥 CHIAMA LA MODERAZIONE (se c'è contenuto testuale)
       if (data?.content) {
         await callModeration(data.id, data.content, 'post')
       }
@@ -430,7 +438,6 @@ export default function Home() {
     }
   }
 
-  // ----- EDIT POST -----
   async function handleEditPost(postId) {
     if (!editPostContent.trim()) return
 
@@ -453,7 +460,6 @@ export default function Home() {
     }
   }
 
-  // ----- LIKE -----
   async function handleLike(postId) {
     if (!user) {
       alert('Devi essere loggato per mettere like')
@@ -489,7 +495,6 @@ export default function Home() {
     }
   }
 
-  // ----- REPOST -----
   async function handleRepost(postId) {
     if (!user) {
       alert('Devi essere loggato per repostare')
@@ -525,7 +530,6 @@ export default function Home() {
     }
   }
 
-  // ----- RENDER -----
   if (loading && posts.length === 0) {
     return (
       <div className="app-container text-center" style={{ paddingTop: '60px' }}>
@@ -544,6 +548,18 @@ export default function Home() {
 
   return (
     <div className="home-layout">
+      {pinModalOpen && (
+        <PinModal
+          onConfirm={verifyPin}
+          onCancel={() => {
+            setPinModalOpen(false)
+            setPendingAction(null)
+            setPinAction(null)
+          }}
+          action={pinAction}
+        />
+      )}
+
       <aside className="sidebar-left">
         <div className="sidebar-logo">
           <Logo variant="full" />
@@ -570,7 +586,6 @@ export default function Home() {
             )}
           </NavLink>
 
-          {/* 🛡️ MODERAZIONE - solo per moderatori/admin */}
           {(user?.role === 'moderator' || user?.role === 'admin') && (
             <NavLink to="/moderation" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <span className="nav-icon">🛡️</span>
@@ -581,6 +596,11 @@ export default function Home() {
           <NavLink to={`/profile/${user?.username || 'me'}`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">👤</span>
             <span className="nav-label">Profilo</span>
+          </NavLink>
+
+          <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} settings-desktop-link`}>
+            <span className="nav-icon">⚙️</span>
+            <span className="nav-label">Impostazioni</span>
           </NavLink>
         </nav>
 
@@ -729,21 +749,6 @@ export default function Home() {
                 className="card"
                 ref={index === posts.length - 1 ? lastPostRef : null}
               >
-                {isModerator && isHidden && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-danger)', fontWeight: 'bold' }}>
-                      🔒 Nascosto (solo moderatori)
-                    </span>
-                    <button
-                      onClick={() => handleToggleHide(post.id, isHidden)}
-                      className="btn btn-success btn-sm"
-                      style={{ fontSize: '0.7rem', padding: '2px 10px' }}
-                    >
-                      Ripristina
-                    </button>
-                  </div>
-                )}
-
                 {post.pinned_by_user && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <div>
@@ -780,7 +785,7 @@ export default function Home() {
                   </div>
                   {isModerator && !isHidden && (
                     <button
-                      onClick={() => handleToggleHide(post.id, isHidden)}
+                      onClick={() => handleToggleHide(post.id)}
                       className="btn btn-danger btn-sm"
                       style={{ fontSize: '0.7rem', padding: '2px 10px', marginLeft: 'auto' }}
                       title="Nascondi questo post (solo moderatori)"

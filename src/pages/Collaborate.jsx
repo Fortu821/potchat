@@ -46,7 +46,7 @@ export default function Collaborate() {
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                 <a
-                  href="https://t.me/potchat_community"
+                  href="https://t.me/+vGBWqj9YCdllZGRk"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-secondary btn-sm"
@@ -54,7 +54,7 @@ export default function Collaborate() {
                   🌱 Community Group (no-control)
                 </a>
                 <a
-                  href="https://t.me/potchat_staff"
+                  href="https://t.me/+MWq-U768onlhYjlk"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-secondary btn-sm"
@@ -62,7 +62,7 @@ export default function Collaborate() {
                   🛡️ Staff Group (accesso su richiesta)
                 </a>
                 <a
-                  href="https://t.me/potchat_announcements"
+                  href="https://t.me/+vuF3Vm23R0gyZGNk"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-secondary btn-sm"

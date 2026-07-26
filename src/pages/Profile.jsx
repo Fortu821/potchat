@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { parseText } from '../utils/textParser'
 import ReportButton from '../components/ReportButton'
 import Achievements from '../components/Achievements'
+import UserTags from '../components/UserTags'
 
 export default function Profile() {
   const { username } = useParams()
@@ -32,7 +33,6 @@ export default function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const avatarInputRef = useRef(null)
 
-  // ----- GESTIONE "me" -----
   useEffect(() => {
     if (username === 'me' && !user) {
       setLoading(false)
@@ -118,7 +118,6 @@ export default function Profile() {
     }
   }
 
-  // ----- UPLOAD AVATAR -----
   async function handleAvatarUpload(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -175,7 +174,6 @@ export default function Profile() {
     }
   }
 
-  // ----- SEGUI -----
   async function handleFollow() {
     if (!user) {
       alert('Devi essere loggato per seguire')
@@ -209,7 +207,6 @@ export default function Profile() {
     }
   }
 
-  // ----- AVVIA CHAT -----
   async function startChat() {
     if (!user) {
       alert('Devi essere loggato per messaggiare')
@@ -232,7 +229,6 @@ export default function Profile() {
     }
   }
 
-  // ----- SALVA MODIFICHE -----
   async function handleSaveProfile(e) {
     e.preventDefault()
     if (!user || user.id !== profile.id) return
@@ -275,7 +271,6 @@ export default function Profile() {
     }
   }
 
-  // ----- RENDER -----
   if (loading) {
     return <div className="app-container text-center" style={{ paddingTop: '60px' }}>
       <div className="text-muted loading-pulse">⏳ Caricamento...</div>
@@ -354,6 +349,8 @@ export default function Profile() {
         <h2 className="profile-name">{profile.display_name || profile.username}</h2>
         <p className="profile-username">@{profile.username}</p>
 
+        <UserTags user={profile} currentUser={user} showProfileTags={true} className="profile-tags" />
+
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
 
         {profile.common_name && (
@@ -400,7 +397,6 @@ export default function Profile() {
               >
                 {isEditing ? '✕ Annulla' : '✏️ Modifica profilo'}
               </button>
-              {/* IMPOSTAZIONI - visibile solo su mobile */}
               <Link to="/settings" className="btn btn-secondary btn-sm settings-mobile-link">
                 ⚙️ Impostazioni
               </Link>
@@ -424,10 +420,7 @@ export default function Profile() {
                 💬 Messaggio
               </button>
               {user && !isOwnProfile && (
-                <ReportButton 
-                  targetType="profile" 
-                  targetId={profile.id} 
-                />
+                <ReportButton targetType="profile" targetId={profile.id} />
               )}
             </>
           )}

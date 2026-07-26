@@ -1931,3 +1931,41 @@ h1, h2, h3, h4, h5, h6 {
     display: none !important;
   }
 }
+
+.user-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.user-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: white;
+  line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Nella card-header, accanto al nome */
+.card-header .user-tags {
+  margin-left: 4px;
+  display: inline-flex;
+}
+
+.profile-tags {
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.profile-tags .user-tag {
+  font-size: 0.85rem;
+  padding: 4px 14px;
+  border-radius: 16px;
+}

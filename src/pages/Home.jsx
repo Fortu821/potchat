@@ -11,6 +11,7 @@ import { parseText } from '../utils/textParser'
 import Logo from '../components/Logo'
 import { checkAchievements } from '../utils/achievementHelper'
 import PinModal from '../components/PinModal'
+import UserTags from '../components/UserTags'
 
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -63,7 +64,7 @@ export default function Home() {
   }, [loading, loadingMore, hasMore])
 
   const POSTS_PER_PAGE = 10
-  const isModerator = user?.role === 'moderator' || user?.role === 'admin'
+  const isModerator = user?.role === 'moderator' || user?.role === 'staff'
 
   const verifyPin = async () => {
     if (pendingAction) {
@@ -586,7 +587,7 @@ export default function Home() {
             )}
           </NavLink>
 
-          {(user?.role === 'moderator' || user?.role === 'admin') && (
+          {(user?.role === 'moderator' || user?.role === 'staff') && (
             <NavLink to="/moderation" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <span className="nav-icon">🛡️</span>
               <span className="nav-label">Moderazione</span>
@@ -782,6 +783,7 @@ export default function Home() {
                     <Link to={`/profile/${post.username}`} className="card-username">
                       @{post.username}
                     </Link>
+                    <UserTags user={post} currentUser={user} showProfileTags={false} />
                   </div>
                   {isModerator && !isHidden && (
                     <button

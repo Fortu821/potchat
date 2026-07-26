@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import PinModal from '../components/PinModal'
+import { getDisplayRole } from '../utils/tagUtils'
 
 export default function ModerationPanel() {
   const { user } = useAuth()
@@ -17,7 +18,11 @@ export default function ModerationPanel() {
   const [pendingAction, setPendingAction] = useState(null)
   const [pinAction, setPinAction] = useState(null)
 
-  const isModerator = user?.role === 'moderator' || user?.role === 'admin'
+  const [allUsers, setAllUsers] = useState([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [updating, setUpdating] = useState({})
+
+  const isModerator = user?.role === 'moderator' || user?.role === 'staff'
   const hasPin = user?.moderation_pin && user.moderation_pin.length > 0
 
   const verifyPin = async () => {
@@ -34,6 +39,41 @@ export default function ModerationPanel() {
     setPendingAction(() => action)
     setPinAction(actionName)
     setPinModalOpen(true)
+  }
+
+  async function fetchAllUsers() {
+    setUsersLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, role, blocked')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setAllUsers(data || [])
+    } catch (err) {
+      console.error('❌ Errore caricamento utenti:', err)
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  async function updateUserRole(userId, newRole) {
+    setUpdating(prev => ({ ...prev, [userId]: true }))
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId)
+
+      if (error) throw error
+      await fetchAllUsers()
+    } catch (err) {
+      console.error('❌ Errore aggiornamento ruolo:', err)
+      alert('Errore durante l\'aggiornamento del ruolo')
+    } finally {
+      setUpdating(prev => ({ ...prev, [userId]: false }))
+    }
   }
 
   async function fetchAllData() {
@@ -63,6 +103,7 @@ export default function ModerationPanel() {
         .order('created_at', { ascending: false })
       setBlockedUsers(blockedData || [])
 
+      await fetchAllUsers()
     } catch (err) {
       console.error('❌ Errore caricamento dati moderazione:', err)
     } finally {
@@ -125,19 +166,22 @@ export default function ModerationPanel() {
     }
   }
 
-  async function unblockUser(userId) {
-    if (!confirm('Sbloccare questo utente?')) return
+  async function toggleBlockUser(userId, currentBlocked) {
+    if (!confirm(currentBlocked ? 'Sbloccare questo utente?' : 'Bloccare questo utente?')) return
+    setUpdating(prev => ({ ...prev, [userId]: true }))
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ blocked: false })
+        .update({ blocked: !currentBlocked })
         .eq('id', userId)
 
       if (error) throw error
       await fetchAllData()
     } catch (err) {
-      console.error('❌ Errore sblocco utente:', err)
-      alert('Errore durante lo sblocco')
+      console.error('❌ Errore toggle blocco:', err)
+      alert('Errore durante l\'operazione')
+    } finally {
+      setUpdating(prev => ({ ...prev, [userId]: false }))
     }
   }
 
@@ -146,7 +190,7 @@ export default function ModerationPanel() {
       <div className="app-container" style={{ maxWidth: '500px', margin: '40px auto', textAlign: 'center' }}>
         <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🛡️</div>
         <h2>Accesso negato</h2>
-        <p style={{ color: 'var(--color-text-muted)' }}>Solo moderatori e amministratori possono accedere a questa pagina.</p>
+        <p style={{ color: 'var(--color-text-muted)' }}>Solo moderatori e staff possono accedere a questa pagina.</p>
         <Link to="/" className="btn btn-secondary">← Torna alla home</Link>
       </div>
     )
@@ -208,6 +252,9 @@ export default function ModerationPanel() {
         </button>
         <button onClick={() => setActiveTab('blocked')} className={`filter-btn ${activeTab === 'blocked' ? 'active-recent' : ''}`}>
           🚫 Utenti bloccati ({blockedUsers.length})
+        </button>
+        <button onClick={() => setActiveTab('tags')} className={`filter-btn ${activeTab === 'tags' ? 'active-recent' : ''}`}>
+          🏷️ Gestione ruoli
         </button>
       </div>
 
@@ -283,17 +330,106 @@ export default function ModerationPanel() {
           {blockedUsers.length === 0 ? (
             <div className="empty-state"><span className="emoji">🌟</span><h3>Nessun utente bloccato</h3><p>Tutti gli utenti sono attivi!</p></div>
           ) : (
-            blockedUsers.map(user => (
-              <div key={user.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            blockedUsers.map(u => (
+              <div key={u.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {user.avatar_url ? <img src={user.avatar_url} alt={user.username} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />}
-                  <div><div><strong>{user.display_name || user.username}</strong></div><div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>@{user.username}</div></div>
+                  {u.avatar_url ? <img src={u.avatar_url} alt={u.username} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />}
+                  <div><div><strong>{u.display_name || u.username}</strong></div><div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>@{u.username}</div></div>
                 </div>
-                <button onClick={() => requirePin(() => unblockUser(user.id), 'sbloccare questo utente')} className="btn btn-success btn-sm">🔓 Sblocca</button>
+                <button onClick={() => requirePin(() => toggleBlockUser(u.id, true), 'sbloccare questo utente')} className="btn btn-success btn-sm">🔓 Sblocca</button>
               </div>
             ))
           )}
         </>
+      )}
+
+      {activeTab === 'tags' && (
+        <div className="tag-management-panel">
+          <p style={{ marginBottom: '16px', color: 'var(--color-text-muted)' }}>
+            Gestisci i ruoli degli utenti. Il ruolo determina la targhetta mostrata.
+          </p>
+
+          {usersLoading ? (
+            <div className="text-muted" style={{ padding: '20px', textAlign: 'center' }}>⏳ Caricamento utenti...</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Utente</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Ruolo</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Bloccato</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allUsers.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt={u.username} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }} />
+                          )}
+                          <div>
+                            <div style={{ fontWeight: '600' }}>{u.display_name || u.username}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>@{u.username}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '8px' }}>
+                        <select
+                          value={u.role || 'user'}
+                          onChange={(e) => updateUserRole(u.id, e.target.value)}
+                          disabled={updating[u.id]}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--color-border)',
+                            backgroundColor: 'var(--color-surface)',
+                            color: 'var(--color-text)',
+                            fontSize: '0.85rem',
+                            width: '100%',
+                            maxWidth: '180px'
+                          }}
+                        >
+                          <option value="user">Nessuno</option>
+                          <option value="staff">🛠️ Staff Member</option>
+                          <option value="moderator">🛡️ Moderator</option>
+                          <option value="official">⭐ Official Account</option>
+                          <option value="beta_tester">🧪 Beta Tester</option>
+                        </select>
+                      </td>
+
+                      <td style={{ padding: '8px' }}>
+                        {u.blocked ? (
+                          <button
+                            onClick={() => requirePin(() => toggleBlockUser(u.id, true), 'sbloccare questo utente')}
+                            disabled={updating[u.id]}
+                            className="btn btn-danger btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '2px 12px' }}
+                          >
+                            🚫 Sì
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => requirePin(() => toggleBlockUser(u.id, false), 'bloccare questo utente')}
+                            disabled={updating[u.id]}
+                            className="btn btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '2px 12px' }}
+                          >
+                            ❌ No
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

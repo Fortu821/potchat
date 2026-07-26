@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -24,7 +23,8 @@ export function AuthProvider({ children }) {
           username: authUser.email?.split('@')[0] || 'utente',
           display_name: authUser.email?.split('@')[0] || 'Utente',
           blocked: false,
-          moderation_pin: null
+          moderation_pin: null,
+          role: 'user'
         }
       }
 
@@ -34,14 +34,14 @@ export function AuthProvider({ children }) {
         display_name: profile.display_name,
         bio: profile.bio,
         avatar_url: profile.avatar_url,
-        role: profile.role,
+        role: profile.role || 'user',
         blocked: profile.blocked || false,
         moderation_pin: profile.moderation_pin || null
       }
 
     } catch (err) {
       console.error('❌ Errore nel recupero del profilo:', err)
-      return { ...authUser, blocked: false, moderation_pin: null }
+      return { ...authUser, blocked: false, moderation_pin: null, role: 'user' }
     }
   }
 

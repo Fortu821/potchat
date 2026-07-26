@@ -8,7 +8,6 @@ export default function Settings() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
 
-  // ----- RESET PASSWORD -----
   const [showResetPassword, setShowResetPassword] = useState(false)
   const [resetPassword, setResetPassword] = useState('')
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState('')
@@ -16,13 +15,12 @@ export default function Settings() {
   const [resetSuccess, setResetSuccess] = useState(false)
   const [resetting, setResetting] = useState(false)
 
-  // ----- CANCELLAZIONE ACCOUNT -----
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
-  // ----- RESET PASSWORD HANDLER -----
+  // ----- RESET PASSWORD -----
   const handleResetPassword = async (e) => {
     e.preventDefault()
     if (!resetPassword || resetPassword.length < 6) {
@@ -57,7 +55,7 @@ export default function Settings() {
     }
   }
 
-  // ----- CANCELLAZIONE ACCOUNT HANDLER -----
+  // ----- DELETE ACCOUNT -----
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'ELIMINA') {
       setDeleteError('Devi scrivere "ELIMINA" per confermare')
@@ -68,7 +66,6 @@ export default function Settings() {
     setDeleteError('')
 
     try {
-      // 1. Elimina il profilo (cascade cancella tutto)
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -76,11 +73,9 @@ export default function Settings() {
 
       if (profileError) throw profileError
 
-      // 2. Elimina l'utente da auth
       const { error: authError } = await supabase.auth.admin.deleteUser(user.id)
       if (authError) throw authError
 
-      // 3. Logout e redirect
       await signOut()
       navigate('/login?deleted=true')
     } catch (err) {
@@ -108,7 +103,7 @@ export default function Settings() {
         <h1 style={{ margin: 0 }}>⚙️ Impostazioni</h1>
       </div>
 
-      {/* ========== SEZIONE ACCOUNT ========== */}
+      {/* SEZIONE ACCOUNT */}
       <div className="settings-card">
         <h3>👤 Account</h3>
         <div className="settings-list">
@@ -125,7 +120,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ========== SEZIONE SICUREZZA ========== */}
+      {/* SEZIONE SICUREZZA */}
       <div className="settings-card">
         <h3>🔐 Sicurezza</h3>
         <div className="settings-list">
@@ -184,7 +179,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ========== SEZIONE DATI ========== */}
+      {/* SEZIONE DATI */}
       <div className="settings-card">
         <h3>🗑️ Dati</h3>
         <div className="settings-list">
@@ -225,7 +220,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ========== SEZIONE LEGALE ========== */}
+      {/* SEZIONE LEGALE */}
       <div className="settings-card">
         <h3>📜 Legale</h3>
         <div className="settings-list">
@@ -252,7 +247,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ========== SEZIONE SUPPORTO ========== */}
+      {/* SEZIONE SUPPORTO */}
       <div className="settings-card">
         <h3>💬 Supporto</h3>
         <div className="settings-list">
@@ -266,6 +261,12 @@ export default function Settings() {
             <span>Contattaci</span>
             <span className="settings-arrow">→</span>
           </Link>
+          <Link to="/collaborate" className="settings-item">
+            <span>🤝</span>
+            <span>Collabora</span>
+            <span className="settings-arrow">→</span>
+          </Link>
+
         </div>
       </div>
 

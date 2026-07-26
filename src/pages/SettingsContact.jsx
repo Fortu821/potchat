@@ -53,6 +53,13 @@ export default function SettingsContact() {
             📣 Vai al modulo di feedback
           </Link>
         </div>
+
+        <div style={{ marginTop: '20px' }}>
+          <Link to="/collaborate" className="btn btn-secondary" style={{ width: '100%', textAlign: 'center' }}>
+            🤝 Vai alla pagina di collaborazione
+          </Link>
+        </div>
+     
       </div>
     </div>
   )

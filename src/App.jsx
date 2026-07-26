@@ -19,6 +19,7 @@ import SettingsPolicy from './pages/SettingsPolicy'
 import SettingsFeedback from './pages/SettingsFeedback'
 import SettingsContact from './pages/SettingsContact'
 import ModerationPanel from './pages/ModerationPanel'
+import Collaborate from './pages/Collaborate'
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(false)
@@ -53,6 +54,7 @@ function App() {
           <Route path="/settings/feedback" element={<SettingsFeedback />} />
           <Route path="/settings/contact" element={<SettingsContact />} />
           <Route path="/moderation" element={<ModerationPanel />} />
+          <Route path="/collaborate" element={<Collaborate />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
